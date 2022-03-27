@@ -225,7 +225,11 @@ int delt_t = 0; // used to control display output rate
 int count = 0;  // used to control display output rate
 
 
-
+#define PI              (float64)3.14159265358979323846f;
+#define GyroMeasError   (float64)(PI * (60.0f / 180.0f));
+#define beta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasError) ;
+#define GyroMeasDrift   (float64)(PInn * (1.0f / 180.0f));
+#define zeta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasDrift);
 /*
 // parameters for 6 DoF sensor fusion calculations
 float64 PI = 3.14159265358979323846f;

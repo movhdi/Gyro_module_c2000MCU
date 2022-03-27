@@ -108,17 +108,6 @@ struct I2CMSG *CurrentMsgPtr;				// Used in interrupts
 Uint16 PassCount;
 Uint16 FailCount;
 
-#define PI              (float64)3.14159265358979323846f;
-#define GyroMeasError   (float64)(PI * (60.0f / 180.0f));
-#define beta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasError) ;
-#define GyroMeasDrift   (float64)(PInn * (1.0f / 180.0f));
-#define zeta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasDrift);
-
-//PInn = ;
-//GyroMeasError = ;     // gyroscope measurement error in rads/s (start at 60 deg/s), then reduce after ~10 s to 3
-//beta ;  // compute beta
-//GyroMeasDrift = ;      // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
-//zeta = ;  // compute zeta, the other free parameter in the Madgwick scheme usually set to a small or zero value
 
 
 
