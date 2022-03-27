@@ -246,6 +246,7 @@ float64 eInt[3] = {0.0f, 0.0f, 0.0f};              // vector to hold integral er
 //===================================================================================================================
 //====== Set of useful function to access acceleratio, gyroscope, and temperature data
 //===================================================================================================================
+
 void writeByte(Uint8 address, Uint8 subAddress, Uint8 data)
 {
     char data_write[2];
@@ -253,6 +254,17 @@ void writeByte(Uint8 address, Uint8 subAddress, Uint8 data)
     data_write[1] = data;
     //i2c.write(address, data_write, 2, 0);
     //I2C layer functions should be implemented here
+}
+
+char readByte(uint8_t address, uint8_t subAddress)
+{
+    char data[1]; // `data` will store the register data
+    char data_write[1];
+    data_write[0] = subAddress;
+    //i2c.write(address, data_write, 1, 1); // no stop
+    //i2c.read(address, data, 1, 0);
+    // i2c read and write should be implemented here
+    return data[0];
 }
 
 
