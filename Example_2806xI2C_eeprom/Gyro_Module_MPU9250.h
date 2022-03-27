@@ -243,4 +243,17 @@ float64 q[4] = {1.0f, 0.0f, 0.0f, 0.0f};           // vector to hold quaternion
 float64 eInt[3] = {0.0f, 0.0f, 0.0f};              // vector to hold integral error for Mahony method
 
 
+//===================================================================================================================
+//====== Set of useful function to access acceleratio, gyroscope, and temperature data
+//===================================================================================================================
+void writeByte(Uint8 address, Uint8 subAddress, Uint8 data)
+{
+    char data_write[2];
+    data_write[0] = subAddress;
+    data_write[1] = data;
+    //i2c.write(address, data_write, 2, 0);
+    //I2C layer functions should be implemented here
+}
+
+
 #endif
