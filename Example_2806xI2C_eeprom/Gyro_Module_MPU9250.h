@@ -230,15 +230,7 @@ int count = 0;  // used to control display output rate
 #define beta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasError) ;
 #define GyroMeasDrift   (float64)(PInn * (1.0f / 180.0f));
 #define zeta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasDrift);
-/*
-// parameters for 6 DoF sensor fusion calculations
-float64 PI = 3.14159265358979323846f;
-float64 GyroMeasError = PI * (60.0 / 180.0);     // gyroscope measurement error in rads/s (start at 60 deg/s), then reduce after ~10 s to 3
-float64 beta = sqrt(3.0 / 4.0) * GyroMeasError;  // compute beta
-float64 GyroMeasDrift = PI * (1.0f / 180.0f);      // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
-float64 zeta = sqrt(3.0f / 4.0f) * GyroMeasDrift;  // compute zeta, the other free parameter in the Madgwick scheme usually set to a small or zero value
 
-*/
 
 
 #define Kp 2.0f * 5.0f // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
