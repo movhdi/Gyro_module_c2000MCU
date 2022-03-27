@@ -256,7 +256,7 @@ void writeByte(Uint8 address, Uint8 subAddress, Uint8 data)
     //I2C layer functions should be implemented here
 }
 
-char readByte(uint8_t address, uint8_t subAddress)
+char readByte(Uint8 address, Uint8 subAddress)
 {
     char data[1]; // `data` will store the register data
     char data_write[1];
@@ -267,5 +267,19 @@ char readByte(uint8_t address, uint8_t subAddress)
     return data[0];
 }
 
+void getMres()
+{
+    switch (Mscale)
+    {
+        // Possible magnetometer scales (and their register bit settings) are:
+        // 14 bit resolution (0) and 16 bit resolution (1)
+        case MFS_14BITS:
+              mRes = 10.0*4912.0/8190.0; // Proper scale to return milliGauss
+              break;
+        case MFS_16BITS:
+              mRes = 10.0*4912.0/32760.0; // Proper scale to return milliGauss
+              break;
+    }
+}
 
 #endif
