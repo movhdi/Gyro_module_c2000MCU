@@ -282,4 +282,29 @@ void getMres()
     }
 }
 
+
+void getGres()
+{
+    switch (Gscale)
+    {
+        // Possible gyro scales (and their register bit settings) are:
+        // 250 DPS (00), 500 DPS (01), 1000 DPS (10), and 2000 DPS  (11).
+            // Here's a bit of an algorith to calculate DPS/(ADC tick) based on that 2-bit value:
+        case GFS_250DPS:
+              gRes = 250.0/32768.0;
+              break;
+        case GFS_500DPS:
+              gRes = 500.0/32768.0;
+              break;
+        case GFS_1000DPS:
+              gRes = 1000.0/32768.0;
+              break;
+        case GFS_2000DPS:
+              gRes = 2000.0/32768.0;
+              break;
+    }
+}
+
+
+
 #endif
