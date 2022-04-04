@@ -60,7 +60,7 @@
 // Included Files
 //
 #include "DSP28x_Project.h"     // Device Headerfile and Examples Include File
-
+#include "I2C_MPU9250.h"
 //
 // Note: I2C Macros used in this example can be found in the
 // F2806x_I2C_defines.h file
@@ -375,7 +375,7 @@ I2CA_WriteData(struct I2CMSG *msg)
     }
 
     //
-    // Setup number of bytes to send MsgBuffer + Address
+    // Setup number of bytes to send MsgBuffer + Address in the EEPROM (High and Low Addresses)
     //
     I2caRegs.I2CCNT = msg->NumOfBytes+2;
 
@@ -434,13 +434,16 @@ I2CA_ReadData(struct I2CMSG *msg)
         //
         // Send data to setup EEPROM address
         //
-        I2caRegs.I2CMDR.all = 0x2620;
+        I2caRegs.I2CMDR.all = 0x2620; // 0b 0010 0110 0010 0000 here is the STP bit zero, means data is sent without STP
+                                      // 6 means : Master Transmitter
+                                      // 4 means : Master Receiver
     }
 
     else if(msg->MsgStatus == I2C_MSGSTAT_RESTART)
     {
         I2caRegs.I2CCNT = msg->NumOfBytes;	// Setup how many bytes to expect
-        I2caRegs.I2CMDR.all = 0x2C20;       // Send restart as master receiver
+        I2caRegs.I2CMDR.all = 0x2C20;       // Send restart as master receiver 0b 0010 1100 0010 0000
+                                            // Here C means Master Receiver
     }
 
     return I2C_SUCCESS;
@@ -559,6 +562,124 @@ i2c_int1a_isr(void)
     //
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP8;
 }
+
+// Gyro I2C Write function
+Uint16 I2C_Write_Gyro(struct I2CMSG_Gyro *msg)
+{
+
+    Uint16 i;
+
+    //
+    // Wait until the STP bit is cleared from any previous master communication.
+    // Clearing of this bit by the module is delayed until after the SCD bit is
+    // set. If this bit is not checked prior to initiating a new message, the
+    // I2C could get confused.
+    //
+    if (I2caRegs.I2CMDR.bit.STP == 1)
+    {
+        return I2C_STP_NOT_READY_ERROR;
+    }
+
+    //
+    // Setup slave address
+    //
+    I2caRegs.I2CSAR = msg->SlaveAddress;
+
+    //
+    // Check if bus busy
+    //
+    if (I2caRegs.I2CSTR.bit.BB == 1)
+    {
+        return I2C_BUS_BUSY_ERROR;
+    }
+
+    //
+    // Setup number of bytes to send MsgBuffer and Register Address
+    //
+    I2caRegs.I2CCNT = msg->NumOfBytes+1;
+
+    //
+    // Setup data to send
+    //
+    I2caRegs.I2CDXR = msg->RegisterAdress;
+
+    // for (i=0; i<msg->NumOfBytes-2; i++)
+    for (i=0; i<msg->NumOfBytes; i++)
+    {
+        I2caRegs.I2CDXR = *(msg->MsgBuffer+i);
+    }
+
+    //
+    // Send start as master transmitter
+    // 0x6E20 : 0b 0110 1110 0010 0000 it means the I2C is set up as Master Transmitter with STP and STT
+    //          and does not give a shit to debugging breakpoints (continues sending data even when a breakpoint is comes up)
+    // 0x6620 : 0b 0110 0110 0010 0000 it means the I2C is set up as Master Transmitter without STP
+
+    if(msg->STP_bit == 1)
+    {
+        I2caRegs.I2CMDR.all = 0x6E20;
+        return I2C_SUCCESS;
+    }
+    else if (msg->STP_bit == 0)
+    {
+        I2caRegs.I2CMDR.all = 0x6620;
+    }
+
+
+
+
+}
+
+//
+// Gyro I2C Read function
+//
+Uint16 I2C_Read_Gyro(struct I2CMSG_Gyro *msg)
+{
+
+    //
+    // Wait until the STP bit is cleared from any previous master communication.
+    // Clearing of this bit by the module is delayed until after the SCD bit is
+    // set. If this bit is not checked prior to initiating a new message, the
+    // I2C could get confused.
+    //
+    if (I2caRegs.I2CMDR.bit.STP == 1)
+    {
+        return I2C_STP_NOT_READY_ERROR;
+    }
+
+    I2caRegs.I2CSAR = msg->SlaveAddress;
+
+    if(msg->MsgStatus == I2C_MSGSTAT_SEND_NOSTOP)
+    {
+        //
+        // Check if bus busy
+        //
+        if (I2caRegs.I2CSTR.bit.BB == 1)
+        {
+            return I2C_BUS_BUSY_ERROR;
+        }
+        I2caRegs.I2CCNT = 2;
+        I2caRegs.I2CDXR = msg->RegisterAddress;
+
+        //
+        // Send data to setup Gyro Register address
+        //
+        I2caRegs.I2CMDR.all = 0x2620; // 0b 0010 0110 0010 0000 here is the STP bit zero, means data is sent without STP
+                                      // 6 means : Master Transmitter
+                                      // 4 means : Master Receiver
+    }
+
+    else if(msg->MsgStatus == I2C_MSGSTAT_RESTART)
+    {
+        I2caRegs.I2CCNT = msg->NumOfBytes;  // Setup how many bytes to expect
+        I2caRegs.I2CMDR.all = 0x2C20;       // Send restart as master receiver 0b 0010 1100 0010 0000
+                                            // Here C means Master Receiver
+    }
+
+    return I2C_SUCCESS;
+
+}
+
 
 //
 // pass -

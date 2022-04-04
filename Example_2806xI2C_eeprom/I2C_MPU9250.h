@@ -11,7 +11,7 @@
 //
 // I2C Message Structure
 //
-struct I2CMSG {
+struct I2CMSG_Gyro {
     //
     // Word stating what state msg is in:
     //   I2C_MSGCMD_INACTIVE = do not send msg
@@ -32,6 +32,11 @@ struct I2CMSG {
     Uint16 SlaveAddress;
 
     //
+    // Num of valid bytes in (or to be put in MsgBuffer)
+    //
+    Uint16 NumOfBytes;
+
+    //
     // Register address of MPU9250
     //
     Uint16 RegisterAdress;
@@ -41,6 +46,10 @@ struct I2CMSG {
     // the FIFO's
     //
     Uint16 MsgBuffer[I2C_MAX_BUFFER_SIZE];
+
+    //
+    // Define a bit to know if the transmitting should end with a STP or not
+    char STP_bit;
 };
 
 
