@@ -32,14 +32,16 @@ struct I2CMSG_Gyro {
     Uint16 SlaveAddress;
 
     //
+    // Register address of MPU9250
+    //
+    Uint16 RegisterAdress;
+
+    //
     // Num of valid bytes in (or to be put in MsgBuffer)
     //
     Uint16 NumOfBytes;
 
-    //
-    // Register address of MPU9250
-    //
-    Uint16 RegisterAdress;
+
 
     //
     // Array holding msg data - max that MAX_BUFFER_SIZE can be is 4 due to

@@ -79,10 +79,10 @@ void fail(void);
 //
 // Defines
 //
-#define I2C_SLAVE_ADDR        0x50
-#define I2C_NUMBYTES          2
-#define I2C_EEPROM_HIGH_ADDR  0x00
-#define I2C_EEPROM_LOW_ADDR   0x30
+//#define I2C_SLAVE_ADDR        0x50
+//#define I2C_NUMBYTES          2
+//#define I2C_EEPROM_HIGH_ADDR  0x00
+//#define I2C_EEPROM_LOW_ADDR   0x30
 
 //
 // Globals
@@ -103,6 +103,9 @@ struct I2CMSG I2cMsgIn1={ I2C_MSGSTAT_SEND_NOSTOP,
                           I2C_NUMBYTES,
                           I2C_EEPROM_HIGH_ADDR,
                           I2C_EEPROM_LOW_ADDR};
+
+struct I2CMSG_Gyro I2CMsg_out={
+                                }
 
 struct I2CMSG *CurrentMsgPtr;				// Used in interrupts
 Uint16 PassCount;
@@ -649,8 +652,8 @@ Uint16 I2C_Read_Gyro(struct I2CMSG_Gyro *msg)
 
     I2caRegs.I2CSAR = msg->SlaveAddress;
 
-    if(msg->MsgStatus == I2C_MSGSTAT_SEND_NOSTOP)
-    {
+//    if(msg->MsgStatus == I2C_MSGSTAT_SEND_NOSTOP)
+//    {
         //
         // Check if bus busy
         //
@@ -667,14 +670,14 @@ Uint16 I2C_Read_Gyro(struct I2CMSG_Gyro *msg)
         I2caRegs.I2CMDR.all = 0x2620; // 0b 0010 0110 0010 0000 here is the STP bit zero, means data is sent without STP
                                       // 6 means : Master Transmitter
                                       // 4 means : Master Receiver
-    }
+//    }
 
-    else if(msg->MsgStatus == I2C_MSGSTAT_RESTART)
-    {
+//    else if(msg->MsgStatus == I2C_MSGSTAT_RESTART)
+//    {
         I2caRegs.I2CCNT = msg->NumOfBytes;  // Setup how many bytes to expect
         I2caRegs.I2CMDR.all = 0x2C20;       // Send restart as master receiver 0b 0010 1100 0010 0000
                                             // Here C means Master Receiver
-    }
+//    }
 
     return I2C_SUCCESS;
 
