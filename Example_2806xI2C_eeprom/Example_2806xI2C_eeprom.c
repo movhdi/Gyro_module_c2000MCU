@@ -61,6 +61,9 @@
 //
 #include "DSP28x_Project.h"     // Device Headerfile and Examples Include File
 #include "I2C_MPU9250.h"
+#include "Gyro_module_MPU9250.h"
+#include "i2cLib_FIFO_polling.h"
+
 //
 // Note: I2C Macros used in this example can be found in the
 // F2806x_I2C_defines.h file
@@ -87,9 +90,12 @@ void fail(void);
 //
 // Globals
 //
+
+Uint16 ControlAddr[1];
 // Two bytes will be used for the outgoing address,
 // thus only setup 14 bytes maximum
 //
+/*
 struct I2CMSG I2cMsgOut1={I2C_MSGSTAT_SEND_WITHSTOP,
                           I2C_SLAVE_ADDR,
                           I2C_NUMBYTES,
@@ -103,11 +109,14 @@ struct I2CMSG I2cMsgIn1={ I2C_MSGSTAT_SEND_NOSTOP,
                           I2C_NUMBYTES,
                           I2C_EEPROM_HIGH_ADDR,
                           I2C_EEPROM_LOW_ADDR};
+*/
 
 struct I2CMSG_Gyro I2CMsg_out={
-                                }
+                                };
 
-struct I2CMSG *CurrentMsgPtr;				// Used in interrupts
+//struct I2CMSG *CurrentMsgPtr;				// Used in interrupts
+struct I2CMSG_Gyro *CurrentMsgPtr;
+
 Uint16 PassCount;
 Uint16 FailCount;
 
@@ -329,7 +338,7 @@ I2CA_Init(void)
     //
     I2caRegs.I2CSAR = 0x0050;		// Slave address - EEPROM control code
 
-    I2caRegs.I2CPSC.all = 6;		// Prescaler - need 7-12 Mhz on module clk
+    I2caRegs.I2CPSC.all = 8;		// Prescaler - need 7-12 Mhz on module clk
     I2caRegs.I2CCLKL = 10;			// NOTE: must be non zero
     I2caRegs.I2CCLKH = 5;			// NOTE: must be non zero
     I2caRegs.I2CIER.all = 0x24;		// Enable SCD & ARDY interrupts
@@ -436,7 +445,7 @@ I2CA_ReadData(struct I2CMSG *msg)
 
         //
         // Send data to setup EEPROM address
-        //
+        // STT MST TRX IRS
         I2caRegs.I2CMDR.all = 0x2620; // 0b 0010 0110 0010 0000 here is the STP bit zero, means data is sent without STP
                                       // 6 means : Master Transmitter
                                       // 4 means : Master Receiver
@@ -446,7 +455,7 @@ I2CA_ReadData(struct I2CMSG *msg)
     {
         I2caRegs.I2CCNT = msg->NumOfBytes;	// Setup how many bytes to expect
         I2caRegs.I2CMDR.all = 0x2C20;       // Send restart as master receiver 0b 0010 1100 0010 0000
-                                            // Here C means Master Receiver
+                                            // Here C means Master Receiver STT STP MST IRS
     }
 
     return I2C_SUCCESS;

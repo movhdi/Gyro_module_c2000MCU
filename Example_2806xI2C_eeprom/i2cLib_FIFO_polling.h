@@ -81,6 +81,8 @@ Uint16 I2C_TxSlaveAddress_ControlBytes(struct I2CHandle *I2C_Params);
 
 Uint16 I2C_MasterWrite(struct I2CHandle *I2C_Params);
 Uint16 I2C_MasterRead(struct I2CHandle *I2C_Params);
+Uint16 WriteByte(Uint8 SlaveAddress, Uint8 RegAddress , Uint8 data);
+
 
 Uint16 checkBusStatus(void);
 Uint16 handleNACK(void);

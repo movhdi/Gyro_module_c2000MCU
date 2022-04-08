@@ -238,6 +238,24 @@ Uint16 I2C_MasterWrite(struct I2CHandle *I2C_Params)
 }
 
 //
+// WriteByte - This function calls I2C_MasterWrite()
+// and sets the I2Chandle structure needed in I2C function
+//      1. Generate START condition and transmit SlaveAddr
+//      2. Transmit NumOfControlBytes in pControlBuffer
+//      3. Generate repeated START condition
+//      4. Receive NumOfDataBytes into pMsgBuffer
+//      5. Generate STOP condition
+//
+
+Uint16 WriteByte(Uint8 SlaveAddress, Uint8 RegAddress , Uint8 data, struct I2CHandle *I2C_Params )
+{
+    I2C_Params->NumOfControlBytes = 1;
+    I2C_Params->NumOfDataBytes = 1;
+    I2C_Params->SlaveAddr = SlaveAddress;
+    I2C_Params->pMsgBuffer = data;
+    I2C_MasterWrite(I2C_Params);
+}
+//
 // I2C_MasterRead - This function reads data bytes from an I2C slave device
 //      based on the passed I2CHandle. Function sequence is the following:
 //
