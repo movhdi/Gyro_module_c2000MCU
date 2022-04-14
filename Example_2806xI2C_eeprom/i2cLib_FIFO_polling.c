@@ -401,24 +401,24 @@ Uint16 I2C_MasterRead(struct I2CHandle *I2C_Params)
 //      5. Generate STOP condition
 //
 
-Uint16 WriteByte(Uint8 SlaveAddress, Uint8 *RegAddress , Uint8 data, struct I2CHandle *I2C_Params )
+Uint16 WriteByte(Uint8 SlaveAddress, Uint16 *RegAddress , Uint16 *data, struct I2CHandle *I2C_Params )
 {
     I2C_Params->NumOfControlBytes = 1;
     I2C_Params->NumOfDataBytes = 1;
     I2C_Params->SlaveAddr = SlaveAddress;
     I2C_Params->pMsgBuffer = data;
     I2C_Params->pControlBuffer = RegAddress;
-    I2C_MasterWrite(I2C_Params);
+    return I2C_MasterWrite(I2C_Params);
 }
 
-Uint16 ReadByte(Uint8 SlaveAddress, Uint8 *RegAddress , Uint8 count,struct I2CHandle *I2C_Params )
+Uint16 ReadBytes(Uint8 SlaveAddress, Uint16 *RegAddress , Uint8 count,Uint16 *dest, struct I2CHandle *I2C_Params )
 {
     I2C_Params->NumOfControlBytes = 1;
-    I2C_Params->NumOfDataBytes = 1;
+    I2C_Params->NumOfDataBytes = count;
     I2C_Params->SlaveAddr = SlaveAddress;
-    I2C_Params->pMsgBuffer = data;
+    I2C_Params->pMsgBuffer = dest;
     I2C_Params->pControlBuffer = RegAddress; // the address is 8 bits long but the memory is 16bits
-    I2C_MasterWrite(I2C_Params);
+    return I2C_MasterRead(I2C_Params);
 
 }
 
