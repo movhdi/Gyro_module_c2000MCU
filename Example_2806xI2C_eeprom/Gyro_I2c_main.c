@@ -7,7 +7,7 @@
 
 
 #include "DSP28x_Project.h"
-#include "I2C_MPU9250.h"
+//#include "I2C_MPU9250.h"
 #include "Gyro_module_MPU9250.h"
 #include "i2cLib_FIFO_polling.h"
 
