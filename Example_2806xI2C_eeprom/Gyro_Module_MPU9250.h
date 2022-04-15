@@ -202,45 +202,26 @@ enum Mscale {
 };
 
 
-
-Uint8 Ascale = AFS_2G;     // AFS_2G, AFS_4G, AFS_8G, AFS_16G
-Uint8 Gscale = GFS_250DPS; // GFS_250DPS, GFS_500DPS, GFS_1000DPS, GFS_2000DPS
-Uint8 Mscale = MFS_16BITS; // MFS_14BITS or MFS_16BITS, 14-bit or 16-bit magnetometer resolution
-Uint8 Mmode = 0x06;        // Either 8 Hz 0x02) or 100 Hz (0x06) magnetometer data ODR
-float aRes, gRes, mRes;      // scale resolutions per LSB for the sensors
-
-
-
-int16 accelCount[3];  // Stores the 16-bit signed accelerometer sensor output
-int16 gyroCount[3];   // Stores the 16-bit signed gyro sensor output
-int16 magCount[3];    // Stores the 16-bit signed magnetometer sensor output
-float32 magCalibration[3] = {0, 0, 0}, magbias[3] = {0, 0, 0};  // Factory mag calibration and mag bias
-float32 gyroBias[3] = {0, 0, 0}, accelBias[3] = {0, 0, 0}; // Bias corrections for gyro and accelerometer
-float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values
-int16 tempCount;   // Stores the real internal chip temperature in degrees Celsius
-float temperature;
-float SelfTest[6];
-
-int delt_t = 0; // used to control display output rate
-int count = 0;  // used to control display output rate
-
-
 #define PI              (float64)3.14159265358979323846f;
 #define GyroMeasError   (float64)(PI * (60.0f / 180.0f));
 #define beta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasError) ;
 #define GyroMeasDrift   (float64)(PInn * (1.0f / 180.0f));
 #define zeta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasDrift);
 
-
-
 #define Kp 2.0f * 5.0f // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
 #define Ki 0.0f
 
-float64 pitch, yaw, roll;
-float64 deltat = 0.0f;                             // integration interval for both filter schemes
-int lastUpdate = 0, firstUpdate = 0, Now = 0;    // used to calculate integration interval                               // used to calculate integration interval
-float64 q[4] = {1.0f, 0.0f, 0.0f, 0.0f};           // vector to hold quaternion
-float64 eInt[3] = {0.0f, 0.0f, 0.0f};              // vector to hold integral error for Mahony method
+//===================================================================================================================
+//====== Set of useful function to access acceleratio, gyroscope, and temperature data
+//===================================================================================================================
+
+
+
+
+
+
+
+
 
 
 #endif
