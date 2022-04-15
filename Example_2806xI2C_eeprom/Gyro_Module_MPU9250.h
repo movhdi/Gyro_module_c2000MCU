@@ -214,8 +214,8 @@ float aRes, gRes, mRes;      // scale resolutions per LSB for the sensors
 int16 accelCount[3];  // Stores the 16-bit signed accelerometer sensor output
 int16 gyroCount[3];   // Stores the 16-bit signed gyro sensor output
 int16 magCount[3];    // Stores the 16-bit signed magnetometer sensor output
-float magCalibration[3] = {0, 0, 0}, magbias[3] = {0, 0, 0};  // Factory mag calibration and mag bias
-float gyroBias[3] = {0, 0, 0}, accelBias[3] = {0, 0, 0}; // Bias corrections for gyro and accelerometer
+float32 magCalibration[3] = {0, 0, 0}, magbias[3] = {0, 0, 0};  // Factory mag calibration and mag bias
+float32 gyroBias[3] = {0, 0, 0}, accelBias[3] = {0, 0, 0}; // Bias corrections for gyro and accelerometer
 float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values
 int16 tempCount;   // Stores the real internal chip temperature in degrees Celsius
 float temperature;
