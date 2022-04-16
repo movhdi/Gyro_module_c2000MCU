@@ -19,7 +19,7 @@
 
 
 #include "F2806x_Cla_typedefs.h"
-
+#include "i2cLib_FIFO_polling.h"
 
 
 // See also MPU-9250 Register Map and Descriptions, Revision 4.0, RM-MPU-9250A-00, Rev. 1.4, 9/9/2013 for registers not listed in
@@ -202,11 +202,11 @@ enum Mscale {
 };
 
 
-#define PI              (float64)3.14159265358979323846f;
-#define GyroMeasError   (float64)(PI * (60.0f / 180.0f));
-#define beta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasError) ;
-#define GyroMeasDrift   (float64)(PInn * (1.0f / 180.0f));
-#define zeta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasDrift);
+#define PI              (float64)3.14159265358979323846f
+#define GyroMeasError   (float64)(PI * (60.0f / 180.0f))
+#define beta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasError)
+#define GyroMeasDrift   (float64)(PInn * (1.0f / 180.0f))
+#define zeta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasDrift)
 
 #define Kp 2.0f * 5.0f // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
 #define Ki 0.0f

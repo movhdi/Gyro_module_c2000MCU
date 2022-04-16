@@ -8,33 +8,34 @@
 #include "Gyro_Module_MPU9250.h"
 
 
+
 // Declarations and Definitions
 
 Uint8 Ascale = AFS_2G;     // AFS_2G, AFS_4G, AFS_8G, AFS_16G
 Uint8 Gscale = GFS_250DPS; // GFS_250DPS, GFS_500DPS, GFS_1000DPS, GFS_2000DPS
 Uint8 Mscale = MFS_16BITS; // MFS_14BITS or MFS_16BITS, 14-bit or 16-bit magnetometer resolution
 Uint8 Mmode = 0x06;        // Either 8 Hz 0x02) or 100 Hz (0x06) magnetometer data ODR
-float aRes, gRes, mRes;      // scale resolutions per LSB for the sensors
+float64 aRes, gRes, mRes;      // scale resolutions per LSB for the sensors
 
 
 
 int16 accelCount[3];  // Stores the 16-bit signed accelerometer sensor output
 int16 gyroCount[3];   // Stores the 16-bit signed gyro sensor output
 int16 magCount[3];    // Stores the 16-bit signed magnetometer sensor output
-float magCalibration[3] = {0, 0, 0}, magbias[3] = {0, 0, 0};  // Factory mag calibration and mag bias
-float gyroBias[3] = {0, 0, 0}, accelBias[3] = {0, 0, 0}; // Bias corrections for gyro and accelerometer
-float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values
+float64 magCalibration[3] = {0, 0, 0}, magbias[3] = {0, 0, 0};  // Factory mag calibration and mag bias
+float64 gyroBias[3] = {0, 0, 0}, accelBias[3] = {0, 0, 0}; // Bias corrections for gyro and accelerometer
+float64 ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values
 int16 tempCount;   // Stores the real internal chip temperature in degrees Celsius
-float temperature;
-float SelfTest[6];
+float64 temperature;
+float64 SelfTest[6];
 
-int delt_t = 0; // used to control display output rate
-int count = 0;  // used to control display output rate
+int16 delt_t = 0; // used to control display output rate
+int16 count = 0;  // used to control display output rate
 
 
 float64 pitch, yaw, roll;
 float64 deltat = 0.0f;                             // integration interval for both filter schemes
-int lastUpdate = 0, firstUpdate = 0, Now = 0;    // used to calculate integration interval                               // used to calculate integration interval
+int32 lastUpdate = 0, firstUpdate = 0, Now = 0;    // used to calculate integration interval                               // used to calculate integration interval
 float64 q[4] = {1.0f, 0.0f, 0.0f, 0.0f};           // vector to hold quaternion
 float64 eInt[3] = {0.0f, 0.0f, 0.0f};              // vector to hold integral error for Mahony method
 
@@ -106,9 +107,9 @@ void readAccelData(int16 * destination)
 {
     Uint8 rawData[6];  // x/y/z accel register data stored here
     readBytes(MPU9250_ADDRESS, ACCEL_XOUT_H, 6, &rawData[0]);  // Read the six raw data registers into data array
-    destination[0] = (int16_t)(((int16_t)rawData[0] << 8) | rawData[1]) ;  // Turn the MSB and LSB into a signed 16-bit value
-    destination[1] = (int16_t)(((int16_t)rawData[2] << 8) | rawData[3]) ;
-    destination[2] = (int16_t)(((int16_t)rawData[4] << 8) | rawData[5]) ;
+    destination[0] = (int16)(((int16)rawData[0] << 8) | rawData[1]) ;  // Turn the MSB and LSB into a signed 16-bit value
+    destination[1] = (int16)(((int16)rawData[2] << 8) | rawData[3]) ;
+    destination[2] = (int16)(((int16)rawData[4] << 8) | rawData[5]) ;
 }
 
 
@@ -116,9 +117,9 @@ void readGyroData(int16 * destination)
 {
     Uint8 rawData[6];  // x/y/z gyro register data stored here
     readBytes(MPU9250_ADDRESS, GYRO_XOUT_H, 6, &rawData[0]);  // Read the six raw data registers sequentially into data array
-    destination[0] = (int16_t)(((int16_t)rawData[0] << 8) | rawData[1]) ;  // Turn the MSB and LSB into a signed 16-bit value
-    destination[1] = (int16_t)(((int16_t)rawData[2] << 8) | rawData[3]) ;
-    destination[2] = (int16_t)(((int16_t)rawData[4] << 8) | rawData[5]) ;
+    destination[0] = (int16)(((int16)rawData[0] << 8) | rawData[1]) ;  // Turn the MSB and LSB into a signed 16-bit value
+    destination[1] = (int16)(((int16)rawData[2] << 8) | rawData[3]) ;
+    destination[2] = (int16)(((int16)rawData[4] << 8) | rawData[5]) ;
 }
 
 
@@ -131,9 +132,9 @@ void readMagData(int16 * destination)
         Uint8 c = rawData[6]; // End data read by reading ST2 register
         if(!(c & 0x08))
         { // Check if magnetic sensor overflow set, if not then report data
-            destination[0] = (int16_t)(((int16_t)rawData[1] << 8) | rawData[0]);  // Turn the MSB and LSB into a signed 16-bit value
-            destination[1] = (int16_t)(((int16_t)rawData[3] << 8) | rawData[2]) ;  // Datav stored as little Endian
-            destination[2] = (int16_t)(((int16_t)rawData[5] << 8) | rawData[4]) ;
+            destination[0] = (int16)(((int16)rawData[1] << 8) | rawData[0]);  // Turn the MSB and LSB into a signed 16-bit value
+            destination[1] = (int16)(((int16)rawData[3] << 8) | rawData[2]) ;  // Datav stored as little Endian
+            destination[2] = (int16)(((int16)rawData[5] << 8) | rawData[4]) ;
         }
     }
 }
@@ -143,7 +144,7 @@ int16 readTempData()
 {
     Uint8 rawData[2];  // x/y/z gyro register data stored here
     readBytes(MPU9250_ADDRESS, TEMP_OUT_H, 2, &rawData[0]);  // Read the two raw data registers sequentially into data array
-    return (int16_t)(((int16_t)rawData[0]) << 8 | rawData[1]) ;  // Turn the MSB and LSB into a 16-bit value
+    return (int16)(((int16)rawData[0]) << 8 | rawData[1]) ;  // Turn the MSB and LSB into a 16-bit value
 }
 
 
@@ -237,7 +238,7 @@ void initMPU9250()
 void calibrateMPU9250(float * dest1, float * dest2)
 {
     Uint8 data[12]; // data array to hold accelerometer and gyro x, y, z, data
-    uint16_t ii, packet_count, fifo_count;
+    Uint16 ii, packet_count, fifo_count;
     int32 gyro_bias[3] = {0, 0, 0}, accel_bias[3] = {0, 0, 0};
 
     // reset device, reset all registers, clear gyro and accelerometer bias registers
@@ -265,8 +266,8 @@ void calibrateMPU9250(float * dest1, float * dest2)
     writeByte(MPU9250_ADDRESS, GYRO_CONFIG, 0x00);  // Set gyro full-scale to 250 degrees per second, maximum sensitivity
     writeByte(MPU9250_ADDRESS, ACCEL_CONFIG, 0x00); // Set accelerometer full-scale to 2 g, maximum sensitivity
 
-    uint16_t  gyrosensitivity  = 131;   // = 131 LSB/degrees/sec
-    uint16_t  accelsensitivity = 16384;  // = 16384 LSB/g
+    Uint16  gyrosensitivity  = 131;   // = 131 LSB/degrees/sec
+    Uint16  accelsensitivity = 16384;  // = 16384 LSB/g
 
     // Configure FIFO to capture accelerometer and gyro data for bias calculation
     writeByte(MPU9250_ADDRESS, USER_CTRL, 0x40);   // Enable FIFO
@@ -276,19 +277,19 @@ void calibrateMPU9250(float * dest1, float * dest2)
     // At end of sample accumulation, turn off FIFO sensor read
     writeByte(MPU9250_ADDRESS, FIFO_EN, 0x00);        // Disable gyro and accelerometer sensors for FIFO
     readBytes(MPU9250_ADDRESS, FIFO_COUNTH, 2, &data[0]); // read FIFO sample count
-    fifo_count = ((uint16_t)data[0] << 8) | data[1];
+    fifo_count = ((Uint16)data[0] << 8) | data[1];
     packet_count = fifo_count/12;// How many sets of full gyro and accelerometer data for averaging
 
     for (ii = 0; ii < packet_count; ii++)
     {
-        int16_t accel_temp[3] = {0, 0, 0}, gyro_temp[3] = {0, 0, 0};
+        int16 accel_temp[3] = {0, 0, 0}, gyro_temp[3] = {0, 0, 0};
         readBytes(MPU9250_ADDRESS, FIFO_R_W, 12, &data[0]); // read data for averaging
-        accel_temp[0] = (int16_t) (((int16_t)data[0] << 8) | data[1]  ) ;  // Form signed 16-bit integer for each sample in FIFO
-        accel_temp[1] = (int16_t) (((int16_t)data[2] << 8) | data[3]  ) ;
-        accel_temp[2] = (int16_t) (((int16_t)data[4] << 8) | data[5]  ) ;
-        gyro_temp[0]  = (int16_t) (((int16_t)data[6] << 8) | data[7]  ) ;
-        gyro_temp[1]  = (int16_t) (((int16_t)data[8] << 8) | data[9]  ) ;
-        gyro_temp[2]  = (int16_t) (((int16_t)data[10] << 8) | data[11]) ;
+        accel_temp[0] = (int16) (((int16)data[0] << 8) | data[1]  ) ;  // Form signed 16-bit integer for each sample in FIFO
+        accel_temp[1] = (int16) (((int16)data[2] << 8) | data[3]  ) ;
+        accel_temp[2] = (int16) (((int16)data[4] << 8) | data[5]  ) ;
+        gyro_temp[0]  = (int16) (((int16)data[6] << 8) | data[7]  ) ;
+        gyro_temp[1]  = (int16) (((int16)data[8] << 8) | data[9]  ) ;
+        gyro_temp[2]  = (int16) (((int16)data[10] << 8) | data[11]) ;
 
         accel_bias[0] += (int32) accel_temp[0]; // Sum individual signed 16-bit biases to get accumulated signed 32-bit biases
         accel_bias[1] += (int32) accel_temp[1];
@@ -335,13 +336,13 @@ void calibrateMPU9250(float * dest1, float * dest2)
 
     int32 accel_bias_reg[3] = {0, 0, 0}; // A place to hold the factory accelerometer trim biases
     readBytes(MPU9250_ADDRESS, XA_OFFSET_H, 2, &data[0]); // Read factory accelerometer trim values
-    accel_bias_reg[0] = (int16_t) ((int16_t)data[0] << 8) | data[1];
+    accel_bias_reg[0] = (int16) ((int16)data[0] << 8) | data[1];
     readBytes(MPU9250_ADDRESS, YA_OFFSET_H, 2, &data[0]);
-    accel_bias_reg[1] = (int16_t) ((int16_t)data[0] << 8) | data[1];
+    accel_bias_reg[1] = (int16) ((int16)data[0] << 8) | data[1];
     readBytes(MPU9250_ADDRESS, ZA_OFFSET_H, 2, &data[0]);
-    accel_bias_reg[2] = (int16_t) ((int16_t)data[0] << 8) | data[1];
+    accel_bias_reg[2] = (int16) ((int16)data[0] << 8) | data[1];
 
-    uint32 mask = 1uL; // Define mask for temperature compensation bit 0 of lower byte of accelerometer bias registers
+    Uint32 mask = 1uL; // Define mask for temperature compensation bit 0 of lower byte of accelerometer bias registers
     Uint8 mask_bit[3] = {0, 0, 0}; // Define array to hold mask bit for each accelerometer bias axis
 
     for(ii = 0; ii < 3; ii++)
@@ -389,7 +390,7 @@ void MPU9250SelfTest(float * destination) // Should return percent deviation fro
     Uint8 rawData[6] = {0, 0, 0, 0, 0, 0};
     Uint8 selfTest[6];
     int32 gAvg[3] = {0}, aAvg[3] = {0}, aSTAvg[3] = {0}, gSTAvg[3] = {0};
-    float factoryTrim[6];
+    float32 factoryTrim[6];
     Uint8 FS = 0;
 
     writeByte(MPU9250_ADDRESS, SMPLRT_DIV, 0x00); // Set gyro sample rate to 1 kHz
@@ -399,17 +400,17 @@ void MPU9250SelfTest(float * destination) // Should return percent deviation fro
     writeByte(MPU9250_ADDRESS, ACCEL_CONFIG, FS<<3); // Set full scale range for the accelerometer to 2 g
 
     for( int ii = 0; ii < 200; ii++)
-    { // get average current values of gyro and acclerometer
-
+    {
+        // get average current values of gyro and acclerometer
         readBytes(MPU9250_ADDRESS, ACCEL_XOUT_H, 6, &rawData[0]); // Read the six raw data registers into data array
-        aAvg[0] += (int16_t)(((int16_t)rawData[0] << 8) | rawData[1]) ; // Turn the MSB and LSB into a signed 16-bit value
-        aAvg[1] += (int16_t)(((int16_t)rawData[2] << 8) | rawData[3]) ;
-        aAvg[2] += (int16_t)(((int16_t)rawData[4] << 8) | rawData[5]) ;
+        aAvg[0] += (int16)(((int16)rawData[0] << 8) | rawData[1]) ; // Turn the MSB and LSB into a signed 16-bit value
+        aAvg[1] += (int16)(((int16)rawData[2] << 8) | rawData[3]) ;
+        aAvg[2] += (int16)(((int16)rawData[4] << 8) | rawData[5]) ;
 
         readBytes(MPU9250_ADDRESS, GYRO_XOUT_H, 6, &rawData[0]); // Read the six raw data registers sequentially into data array
-        gAvg[0] += (int16_t)(((int16_t)rawData[0] << 8) | rawData[1]) ; // Turn the MSB and LSB into a signed 16-bit value
-        gAvg[1] += (int16_t)(((int16_t)rawData[2] << 8) | rawData[3]) ;
-        gAvg[2] += (int16_t)(((int16_t)rawData[4] << 8) | rawData[5]) ;
+        gAvg[0] += (int16)(((int16)rawData[0] << 8) | rawData[1]) ; // Turn the MSB and LSB into a signed 16-bit value
+        gAvg[1] += (int16)(((int16)rawData[2] << 8) | rawData[3]) ;
+        gAvg[2] += (int16)(((int16)rawData[4] << 8) | rawData[5]) ;
     }
 
     for (int ii =0; ii < 3; ii++)
@@ -421,23 +422,23 @@ void MPU9250SelfTest(float * destination) // Should return percent deviation fro
     // Configure the accelerometer for self-test
     writeByte(MPU9250_ADDRESS, ACCEL_CONFIG, 0xE0); // Enable self test on all three axes and set accelerometer range to +/- 2 g
     writeByte(MPU9250_ADDRESS, GYRO_CONFIG, 0xE0); // Enable self test on all three axes and set gyro range to +/- 250 degrees/s
-    delay(25); // Delay a while to let the device stabilize
+    //delay(25); // Delay a while to let the device stabilize
 
     for( int ii = 0; ii < 200; ii++)
     { // get average self-test values of gyro and acclerometer
 
         readBytes(MPU9250_ADDRESS, ACCEL_XOUT_H, 6, &rawData[0]); // Read the six raw data registers into data array
-        aSTAvg[0] += (int16_t)(((int16_t)rawData[0] << 8) | rawData[1]) ; // Turn the MSB and LSB into a signed 16-bit value
-        aSTAvg[1] += (int16_t)(((int16_t)rawData[2] << 8) | rawData[3]) ;
-        aSTAvg[2] += (int16_t)(((int16_t)rawData[4] << 8) | rawData[5]) ;
+        aSTAvg[0] += (int16)(((int16)rawData[0] << 8) | rawData[1]) ; // Turn the MSB and LSB into a signed 16-bit value
+        aSTAvg[1] += (int16)(((int16)rawData[2] << 8) | rawData[3]) ;
+        aSTAvg[2] += (int16)(((int16)rawData[4] << 8) | rawData[5]) ;
 
         readBytes(MPU9250_ADDRESS, GYRO_XOUT_H, 6, &rawData[0]); // Read the six raw data registers sequentially into data array
-        gSTAvg[0] += (int16_t)(((int16_t)rawData[0] << 8) | rawData[1]) ; // Turn the MSB and LSB into a signed 16-bit value
-        gSTAvg[1] += (int16_t)(((int16_t)rawData[2] << 8) | rawData[3]) ;
-        gSTAvg[2] += (int16_t)(((int16_t)rawData[4] << 8) | rawData[5]) ;
+        gSTAvg[0] += (int16)(((int16)rawData[0] << 8) | rawData[1]) ; // Turn the MSB and LSB into a signed 16-bit value
+        gSTAvg[1] += (int16)(((int16)rawData[2] << 8) | rawData[3]) ;
+        gSTAvg[2] += (int16)(((int16)rawData[4] << 8) | rawData[5]) ;
     }
 
-    for (int ii =0; ii < 3; ii++)
+    for (int16 ii =0; ii < 3; ii++)
     { // Get average of 200 values and store as average self-test readings
         aSTAvg[ii] /= 200;
         gSTAvg[ii] /= 200;
@@ -446,7 +447,7 @@ void MPU9250SelfTest(float * destination) // Should return percent deviation fro
     // Configure the gyro and accelerometer for normal operation
     writeByte(MPU9250_ADDRESS, ACCEL_CONFIG, 0x00);
     writeByte(MPU9250_ADDRESS, GYRO_CONFIG, 0x00);
-    delay(25); // Delay a while to let the device stabilize
+    //delay(25); // Delay a while to let the device stabilize
 
     // Retrieve accelerometer and gyro factory Self-Test Code from USR_Reg
     selfTest[0] = readByte(MPU9250_ADDRESS, SELF_TEST_X_ACCEL); // X-axis accel self-test results
@@ -483,37 +484,38 @@ void MPU9250SelfTest(float * destination) // Should return percent deviation fro
 // device orientation -- which can be converted to yaw, pitch, and roll. Useful for stabilizing quadcopters, etc.
 // The performance of the orientation filter is at least as good as conventional Kalman-based filtering algorithms
 // but is much less computationally intensive---it can be performed on a 3.3 V Pro Mini operating at 8 MHz!
-void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz)
+void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx,
+                              float gy, float gz, float mx, float my, float mz)
 {
-    float q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];   // short name local variable for readability
-    float norm;
-    float hx, hy, _2bx, _2bz;
-    float s1, s2, s3, s4;
-    float qDot1, qDot2, qDot3, qDot4;
+    float64 q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];   // short name local variable for readability
+    float64 norm;
+    float64 hx, hy, _2bx, _2bz;
+    float64 s1, s2, s3, s4;
+    float64 qDot1, qDot2, qDot3, qDot4;
 
     // Auxiliary variables to avoid repeated arithmetic
-    float _2q1mx;
-    float _2q1my;
-    float _2q1mz;
-    float _2q2mx;
-    float _4bx;
-    float _4bz;
-    float _2q1 = 2.0f * q1;
-    float _2q2 = 2.0f * q2;
-    float _2q3 = 2.0f * q3;
-    float _2q4 = 2.0f * q4;
-    float _2q1q3 = 2.0f * q1 * q3;
-    float _2q3q4 = 2.0f * q3 * q4;
-    float q1q1 = q1 * q1;
-    float q1q2 = q1 * q2;
-    float q1q3 = q1 * q3;
-    float q1q4 = q1 * q4;
-    float q2q2 = q2 * q2;
-    float q2q3 = q2 * q3;
-    float q2q4 = q2 * q4;
-    float q3q3 = q3 * q3;
-    float q3q4 = q3 * q4;
-    float q4q4 = q4 * q4;
+    float64 _2q1mx;
+    float64 _2q1my;
+    float64 _2q1mz;
+    float64 _2q2mx;
+    float64 _4bx;
+    float64 _4bz;
+    float64 _2q1 = 2.0f * q1;
+    float64 _2q2 = 2.0f * q2;
+    float64 _2q3 = 2.0f * q3;
+    float64 _2q4 = 2.0f * q4;
+    float64 _2q1q3 = 2.0f * q1 * q3;
+    float64 _2q3q4 = 2.0f * q3 * q4;
+    float64 q1q1 = q1 * q1;
+    float64 q1q2 = q1 * q2;
+    float64 q1q3 = q1 * q3;
+    float64 q1q4 = q1 * q4;
+    float64 q2q2 = q2 * q2;
+    float64 q2q3 = q2 * q3;
+    float64 q2q4 = q2 * q4;
+    float64 q3q3 = q3 * q3;
+    float64 q3q4 = q3 * q4;
+    float64 q4q4 = q4 * q4;
 
     // Normalise accelerometer measurement
     norm = sqrt(ax * ax + ay * ay + az * az);
@@ -556,7 +558,7 @@ void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy, 
     s4 *= norm;
 
     // Compute rate of change of quaternion
-    qDot1 = 0.5f * (-q2 * gx - q3 * gy - q4 * gz) - beta * s1;
+    qDot1 = 0.5f * (-q2 * gx - q3 * gy - q4 * gz) - beta * s1 ;
     qDot2 = 0.5f * (q1 * gx + q3 * gz - q4 * gy) - beta * s2;
     qDot3 = 0.5f * (q1 * gy - q2 * gz + q4 * gx) - beta * s3;
     qDot4 = 0.5f * (q1 * gz + q2 * gy - q3 * gx) - beta * s4;
