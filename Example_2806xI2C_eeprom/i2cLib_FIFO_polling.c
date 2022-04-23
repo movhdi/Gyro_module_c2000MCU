@@ -46,6 +46,7 @@
 // Global variables used by i2cLib_FIFO_polling
 //
 Uint16 timeoutCheck;
+extern Uint16 True_address;
 
 //
 // I2C_TxSlaveAddress_ControlBytes - This function transmits the SlaveAddr
@@ -327,6 +328,7 @@ Uint16 I2C_MasterRead(struct I2CHandle *I2C_Params)
         for(i=0; i<I2C_FIFO_LEVEL; i++)
         {
             I2C_Params->pMsgBuffer[buff_pos++] = I2caRegs.I2CDRR;
+            True_address = I2C_Params->SlaveAddr;
         }
 
         count++;
@@ -361,6 +363,7 @@ Uint16 I2C_MasterRead(struct I2CHandle *I2C_Params)
         for(i=0; i<remainingBytes; i++)
         {
             I2C_Params->pMsgBuffer[buff_pos++] = I2caRegs.I2CDRR;
+            True_address = I2C_Params->SlaveAddr;
         }
     }
 
@@ -388,6 +391,7 @@ Uint16 I2C_MasterRead(struct I2CHandle *I2C_Params)
     }
 
     return SUCCESS;
+    True_address = I2C_Params->SlaveAddr;
 }
 
 
