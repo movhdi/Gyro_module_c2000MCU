@@ -176,9 +176,9 @@
 
 #define ADO 0
 #if ADO
-#define MPU9250_ADDRESS 0x69<<1  // Device address when ADO = 1
+#define MPU9250_ADDRESS 0x69  // Device address when ADO = 1
 #else
-#define MPU9250_ADDRESS 0x68<<1  // Device address when ADO = 0
+#define MPU9250_ADDRESS 0x68  // Device address when ADO = 0
 #endif
 
 // Set initial input parameters

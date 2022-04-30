@@ -12,7 +12,9 @@
 #include "i2cLib_FIFO_polling.h"
 
 //funtion prototypes
-void   I2CA_Init(void);
+void  I2CA_Init(void);
+void  fail(void);
+
 
 // Macros
 #define EEPROM_READ_ATTEMPTS        10
@@ -29,6 +31,14 @@ Uint16 SlaveAddress_I2C = 0x68;
 Uint16 ControlBuffer[1];
 Uint16 k=0;
 Uint16 True_address = 0x68;
+extern Uint16 Gscale;
+extern Uint16 Ascale;
+extern float64 gyroBias[3], accelBias[3];
+
+
+
+
+
 void main(void)
 {
     InitSysCtrl();
@@ -49,95 +59,148 @@ void main(void)
         RxMsgBuffer[i] = 0;
     }
 
-    //Sample code to just communicate with the sensor
-    //first initialize the i2c handle structure
-    ControlBuffer[0] = 0x0000;
-    ControlBuffer[0] = WHO_AM_I_MPU9250;
-    Gyro.NumOfControlBytes = 1;
-    Gyro.NumOfDataBytes = 1;
-    //Gyro.SlaveAddr = SlaveAddress_I2C;
-    Gyro.pControlBuffer = ControlBuffer;
-    Gyro.pMsgBuffer = RxMsgBuffer;
     Gyro.Timeout = 100;
-
     Gyro.SlaveAddr = 0x68;
+
+    Status = ReadBytes(MPU9250_ADDRESS, WHO_AM_I_MPU9250, 1, RxMsgBuffer, &Gyro);
+    //
+    // Reset function
+    //
+    TxMsgBuffer[0] = 0x80;
+    WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    // End of reset function
+
+    //
+    // Calibrate function
+    //
+    TxMsgBuffer[0] = 0x80;
+    WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x01;
+    WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x00;
+    WriteByte(MPU9250_ADDRESS, PWR_MGMT_2, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x00;
+    WriteByte(MPU9250_ADDRESS, INT_ENABLE, TxMsgBuffer, &Gyro);
+    WriteByte(MPU9250_ADDRESS, FIFO_EN, TxMsgBuffer, &Gyro);
+    WriteByte(MPU9250_ADDRESS, INT_ENABLE, TxMsgBuffer, &Gyro);
+    WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    WriteByte(MPU9250_ADDRESS, I2C_MST_CTRL, TxMsgBuffer, &Gyro);
+    WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x0C;
+    WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x01;
+    WriteByte(MPU9250_ADDRESS, CONFIG, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x00;
+    WriteByte(MPU9250_ADDRESS, GYRO_CONFIG, TxMsgBuffer, &Gyro);
+    WriteByte(MPU9250_ADDRESS, ACCEL_CONFIG, TxMsgBuffer, &Gyro);
+    Uint16  gyrosensitivity  = 131;
+    Uint16  accelsensitivity = 16384;
+    TxMsgBuffer[0] = 0x40;
+    WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x78;
+    WriteByte(MPU9250_ADDRESS, FIFO_EN, TxMsgBuffer, &Gyro);
+    DELAY_US(1000);
+    TxMsgBuffer[0] = 0x00;
+    WriteByte(MPU9250_ADDRESS, FIFO_EN, TxMsgBuffer, &Gyro);
+    RxMsgBuffer[0] = 0x00;
+    ReadBytes(MPU9250_ADDRESS, FIFO_COUNTH, 2, RxMsgBuffer, &Gyro);
+    Uint16 ii, packet_count, fifo_count;
+    int32 gyro_bias[3] = {0, 0, 0}, accel_bias[3] = {0, 0, 0};
+    Uint8 data[12];
+    fifo_count = ((Uint16)RxMsgBuffer[0] << 8) | RxMsgBuffer[1];
+    packet_count = fifo_count/12;
+
+    for (ii = 0; ii < packet_count; ii++)
+    {
+        int16 accel_temp[3] = {0, 0, 0}, gyro_temp[3] = {0, 0, 0};
+        ReadBytes(MPU9250_ADDRESS, FIFO_R_W, 12, RxMsgBuffer, &Gyro); // read data for averaging
+        accel_temp[0] = (int16) (((int16)RxMsgBuffer[0] << 8) | RxMsgBuffer[1]  ) ;  // Form signed 16-bit integer for each sample in FIFO
+        accel_temp[1] = (int16) (((int16)RxMsgBuffer[2] << 8) | RxMsgBuffer[3]  ) ;
+        accel_temp[2] = (int16) (((int16)RxMsgBuffer[4] << 8) | RxMsgBuffer[5]  ) ;
+        gyro_temp[0]  = (int16) (((int16)RxMsgBuffer[6] << 8) | RxMsgBuffer[7]  ) ;
+        gyro_temp[1]  = (int16) (((int16)RxMsgBuffer[8] << 8) | RxMsgBuffer[9]  ) ;
+        gyro_temp[2]  = (int16) (((int16)RxMsgBuffer[10] << 8) | RxMsgBuffer[11]) ;
+
+        accel_bias[0] += (int32) accel_temp[0]; // Sum individual signed 16-bit biases to get accumulated signed 32-bit biases
+        accel_bias[1] += (int32) accel_temp[1];
+        accel_bias[2] += (int32) accel_temp[2];
+        gyro_bias[0]  += (int32) gyro_temp[0];
+        gyro_bias[1]  += (int32) gyro_temp[1];
+        gyro_bias[2]  += (int32) gyro_temp[2];
+    }
+    accel_bias[0] /= (int32) packet_count; // Normalize sums to get average count biases
+    accel_bias[1] /= (int32) packet_count;
+    accel_bias[2] /= (int32) packet_count;
+    gyro_bias[0]  /= (int32) packet_count;
+    gyro_bias[1]  /= (int32) packet_count;
+    gyro_bias[2]  /= (int32) packet_count;
+    if(accel_bias[2] > 0L) {accel_bias[2] -= (int32) accelsensitivity;}  // Remove gravity from the z-axis accelerometer bias calculation
+    else {accel_bias[2] += (int32) accelsensitivity;}
+    data[0] = (-gyro_bias[0]/4  >> 8) & 0xFF; // Divide by 4 to get 32.9 LSB per deg/s to conform to expected bias input format
+    data[1] = (-gyro_bias[0]/4)       & 0xFF; // Biases are additive, so change sign on calculated average gyro biases
+    data[2] = (-gyro_bias[1]/4  >> 8) & 0xFF;
+    data[3] = (-gyro_bias[1]/4)       & 0xFF;
+    data[4] = (-gyro_bias[2]/4  >> 8) & 0xFF;
+    data[5] = (-gyro_bias[2]/4)       & 0xFF;
+
+    gyro_bias[0] = (float64) gyro_bias[0]/(float64) gyrosensitivity; // construct gyro bias in deg/s for later manual subtraction
+    gyro_bias[1] = (float64) gyro_bias[1]/(float64) gyrosensitivity;
+    gyro_bias[2] = (float64) gyro_bias[2]/(float64) gyrosensitivity;
+
+
+
+
+
+
+
+    // End of calibrate function
+
+    //
+    // Init Function
+    //
+    TxMsgBuffer[0] = 0x00;
+    WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x81;
+    WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x03;
+    WriteByte(MPU9250_ADDRESS, CONFIG, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x04;
+    WriteByte(MPU9250_ADDRESS, SMPLRT_DIV, TxMsgBuffer, &Gyro);
+    RxMsgBuffer[0] = 0x00;
+    ReadBytes(MPU9250_ADDRESS, GYRO_CONFIG, 1, RxMsgBuffer, &Gyro);
+    RxMsgBuffer[0] = RxMsgBuffer[0] & ~0x02;
+    RxMsgBuffer[0] = RxMsgBuffer[0] & ~0x18;
+    RxMsgBuffer[0] = RxMsgBuffer[0] | Gscale << 3;
+    TxMsgBuffer[0] = RxMsgBuffer[0];
+    WriteByte(MPU9250_ADDRESS, GYRO_CONFIG, TxMsgBuffer, &Gyro);
+
+    ReadBytes(MPU9250_ADDRESS, ACCEL_CONFIG, 1, RxMsgBuffer, &Gyro);
+    RxMsgBuffer[0] = RxMsgBuffer[0] & ~0x18;
+    RxMsgBuffer[0] = RxMsgBuffer[0] | Ascale << 3;
+    TxMsgBuffer[0] = RxMsgBuffer[0];
+    WriteByte(MPU9250_ADDRESS, ACCEL_CONFIG, TxMsgBuffer, &Gyro);
+
+    ReadBytes(MPU9250_ADDRESS, ACCEL_CONFIG2, 1, RxMsgBuffer, &Gyro);
+    RxMsgBuffer[0] = RxMsgBuffer[0] & ~0x0F;
+    RxMsgBuffer[0] = RxMsgBuffer[0] | 0x03;
+    TxMsgBuffer[0] = RxMsgBuffer[0];
+    WriteByte(MPU9250_ADDRESS, ACCEL_CONFIG2, TxMsgBuffer, &Gyro);
+
+    TxMsgBuffer[0] = 0x22;
+    WriteByte(MPU9250_ADDRESS, INT_PIN_CFG, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x01;
+    WriteByte(MPU9250_ADDRESS, INT_ENABLE, TxMsgBuffer, &Gyro);
+    DELAY_US(1000);
+
+    //
+    // End of Init function
+    //
+
+    ReadBytes(MPU9250_ADDRESS, WHO_AM_I_MPU9250, 1, RxMsgBuffer, &Gyro);
+
     while(1)
         {
-/*        for(i=0x0; i<0x7F ; i++)
-        {
-            // Delay between read attempts during EEPROM write cycle time
-            Gyro.SlaveAddr = i;
-            DELAY_US(1000);
 
-            Status = I2C_MasterRead(&Gyro);
-
-            if(Status == SUCCESS)
-            {
-                k++;
-                True_address = (&Gyro)->SlaveAddr;
-            }
-        }*/
-        //k=0;
-
-
-        DELAY_US(1000);
-            /*//I2caRegs.I2CFFTX.all = 0x6000;
-            I2caRegs.I2CCNT = 1;
-            //
-            // Set up as master transmitter
-            // FREE + MST + TRX + IRS
-            //
-            I2caRegs.I2CMDR.all = 0x4620;
-            I2caRegs.I2CSAR = 0x68;
-            I2caRegs.I2CDXR = WHO_AM_I_MPU9250; //Register address transmit
-            I2caRegs.I2CMDR.bit.STT = 0x1; // Send START condition
-            //Checking ACK or NACK
-                while(I2caRegs.I2CSTR.bit.ARDY == 1) // Waiting for FIFO to be empty again
-                                                   // Here it takes 1 Byte of data (8 clks +1 clk ACK)
-                                                   // Every clock takes 2.5 us, 9clks takes 22.5 us
-                {
-                    DELAY_US(10);
-                }
-                if(I2caRegs.I2CSTR.bit.NACK == 1)
-                    {
-                        // Clear NACK
-                        I2caRegs.I2CSTR.bit.NACK = 1;
-
-                        // disable FIFO
-                        //I2caRegs.I2CFFTX.all = 0x0000;
-                        //I2caRegs.I2CFFRX.all = 0x0000;
-
-                        // Generate STOP condition
-                        I2caRegs.I2CMDR.bit.STP = 1;
-                    }
-                //I2caRegs.I2CFFTX.bit.TXFFRST = 0;
-
-                //Transmitting the read session
-                I2caRegs.I2CCNT = 1;
-                // Enable RX FIFO
-                //I2caRegs.I2CFFRX.all = 0x2040;
-
-                //
-                // Set up as master receiver
-                // FREE + MST + IRS
-                //
-                I2caRegs.I2CMDR.all = 0x4420;
-
-                I2caRegs.I2CMDR.bit.STT = 0x1; // Send repeated START condition
-                while(I2caRegs.I2CSTR.bit.ARDY == 1)
-                {
-                    DELAY_US(10);
-                }
-                RxMsgBuffer[0] = I2caRegs.I2CDRR;
-                I2caRegs.I2CMDR.bit.STP = 1;*/
-
-        Status = I2C_MasterRead(&Gyro);
-
-        if(Status == SUCCESS)
-        {
-            k++;
-            True_address = (&Gyro)->SlaveAddr;
-        }
         }
 
 }
@@ -161,4 +224,10 @@ void   I2CA_Init(void)
     I2caRegs.I2CMDR.all = 0x0020;
 
     return;
+}
+
+void fail(void)
+{
+    __asm("   ESTOP0");
+    for(;;);
 }
