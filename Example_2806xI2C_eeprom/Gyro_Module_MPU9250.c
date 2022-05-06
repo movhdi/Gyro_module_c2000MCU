@@ -276,6 +276,8 @@ void calibrateMPU9250(float * dest1, float * dest2)
 
     // At end of sample accumulation, turn off FIFO sensor read
     writeByte(MPU9250_ADDRESS, FIFO_EN, 0x00);        // Disable gyro and accelerometer sensors for FIFO
+
+
     readBytes(MPU9250_ADDRESS, FIFO_COUNTH, 2, &data[0]); // read FIFO sample count
     fifo_count = ((Uint16)data[0] << 8) | data[1];
     packet_count = fifo_count/12;// How many sets of full gyro and accelerometer data for averaging
@@ -379,13 +381,14 @@ void calibrateMPU9250(float * dest1, float * dest2)
     dest2[0] = (float)accel_bias[0]/(float)accelsensitivity;
     dest2[1] = (float)accel_bias[1]/(float)accelsensitivity;
     dest2[2] = (float)accel_bias[2]/(float)accelsensitivity;
+
 }
 
 
 
 
 // Accelerometer and gyroscope self test; check calibration wrt factory settings
-void MPU9250SelfTest(float * destination) // Should return percent deviation from factory trim values, +/- 14 or less deviation is a pass
+void MPU9250SelfTest(float64 * destination) // Should return percent deviation from factory trim values, +/- 14 or less deviation is a pass
 {
     Uint8 rawData[6] = {0, 0, 0, 0, 0, 0};
     Uint8 selfTest[6];
@@ -399,7 +402,7 @@ void MPU9250SelfTest(float * destination) // Should return percent deviation fro
     writeByte(MPU9250_ADDRESS, ACCEL_CONFIG2, 0x02); // Set accelerometer rate to 1 kHz and bandwidth to 92 Hz
     writeByte(MPU9250_ADDRESS, ACCEL_CONFIG, FS<<3); // Set full scale range for the accelerometer to 2 g
 
-    for( int ii = 0; ii < 200; ii++)
+    for( int32 ii = 0; ii < 200; ii++)
     {
         // get average current values of gyro and acclerometer
         readBytes(MPU9250_ADDRESS, ACCEL_XOUT_H, 6, &rawData[0]); // Read the six raw data registers into data array
@@ -413,7 +416,7 @@ void MPU9250SelfTest(float * destination) // Should return percent deviation fro
         gAvg[2] += (int16)(((int16)rawData[4] << 8) | rawData[5]) ;
     }
 
-    for (int ii =0; ii < 3; ii++)
+    for (int32 ii =0; ii < 3; ii++)
     { // Get average of 200 values and store as average current readings
         aAvg[ii] /= 200;
         gAvg[ii] /= 200;
@@ -424,7 +427,7 @@ void MPU9250SelfTest(float * destination) // Should return percent deviation fro
     writeByte(MPU9250_ADDRESS, GYRO_CONFIG, 0xE0); // Enable self test on all three axes and set gyro range to +/- 250 degrees/s
     //delay(25); // Delay a while to let the device stabilize
 
-    for( int ii = 0; ii < 200; ii++)
+    for( int32 ii = 0; ii < 200; ii++)
     { // get average self-test values of gyro and acclerometer
 
         readBytes(MPU9250_ADDRESS, ACCEL_XOUT_H, 6, &rawData[0]); // Read the six raw data registers into data array
@@ -467,7 +470,7 @@ void MPU9250SelfTest(float * destination) // Should return percent deviation fro
 
     // Report results as a ratio of (STR - FT)/FT; the change from Factory Trim of the Self-Test Response
     // To get percent, must multiply by 100
-    for (int i = 0; i < 3; i++)
+    for (int32 i = 0; i < 3; i++)
     {
         destination[i] = 100.0*((float)(aSTAvg[i] - aAvg[i]))/factoryTrim[i] - 100.; // Report percent differences
         destination[i+3] = 100.0*((float)(gSTAvg[i] - gAvg[i]))/factoryTrim[i+3] - 100.; // Report percent differences

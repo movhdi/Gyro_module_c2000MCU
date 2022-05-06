@@ -17,7 +17,7 @@
 //
 // I2C Library Defines
 //
-#define MAX_BUFFER_SIZE             64
+#define MAX_BUFFER_SIZE             12
 #define I2C_FIFO_LEVEL              4
 
 //

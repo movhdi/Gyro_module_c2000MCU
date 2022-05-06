@@ -46,7 +46,6 @@
 // Global variables used by i2cLib_FIFO_polling
 //
 Uint16 timeoutCheck;
-extern Uint16 True_address;
 extern Uint16 ControlBuffer[1];
 
 //
@@ -329,7 +328,6 @@ Uint16 I2C_MasterRead(struct I2CHandle *I2C_Params)
         for(i=0; i<I2C_FIFO_LEVEL; i++)
         {
             I2C_Params->pMsgBuffer[buff_pos++] = I2caRegs.I2CDRR;
-            True_address = I2C_Params->SlaveAddr;
         }
 
         count++;
@@ -364,7 +362,6 @@ Uint16 I2C_MasterRead(struct I2CHandle *I2C_Params)
         for(i=0; i<remainingBytes; i++)
         {
             I2C_Params->pMsgBuffer[buff_pos++] = I2caRegs.I2CDRR;
-            True_address = I2C_Params->SlaveAddr;
         }
     }
 
@@ -421,15 +418,15 @@ Uint16 WriteByte(Uint8 SlaveAddress, Uint16 RegAddress , Uint16 *data, struct I2
 
 Uint16 ReadBytes(Uint8 SlaveAddress, Uint16 RegAddress , Uint8 count,Uint16 *dest, struct I2CHandle *I2C_Params )
 {
-    Uint16 Status;
+    Uint16 tatus;
     I2C_Params->NumOfControlBytes = 1;
     I2C_Params->NumOfDataBytes = count;
     I2C_Params->SlaveAddr = SlaveAddress;
     I2C_Params->pMsgBuffer = dest;
     ControlBuffer[0] = RegAddress;
     I2C_Params->pControlBuffer = ControlBuffer; // the address is 8 bits long but the memory is 16bits
-    Status = I2C_MasterRead(I2C_Params);
-    return Status;
+    tatus = I2C_MasterRead(I2C_Params);
+    return tatus;
 }
 
 //

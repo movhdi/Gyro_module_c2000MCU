@@ -12,13 +12,13 @@
 #include "i2cLib_FIFO_polling.h"
 
 //funtion prototypes
-void  I2CA_Init(void);
-void  fail(void);
-
+void I2CA_Init(void);
+void pass(void);
+void fail(void);
 
 // Macros
-#define EEPROM_READ_ATTEMPTS        10
-#define EEPROM_DATA_BYTES           32
+#define Gyro_READ_ATTEMPTS        10
+#define Gyro_DATA_BYTES           32
 
 
 // Globals
@@ -26,13 +26,11 @@ struct I2CHandle Gyro;
 Uint16 ControlAddr[1];
 Uint16 TxMsgBuffer[MAX_BUFFER_SIZE];
 Uint16 RxMsgBuffer[MAX_BUFFER_SIZE];
-Uint16 Status;
-Uint16 SlaveAddress_I2C = 0x68;
+Uint16 Status = 0x0000;
 Uint16 ControlBuffer[1];
 Uint16 k=0;
-Uint16 True_address = 0x68;
-extern Uint16 Gscale;
-extern Uint16 Ascale;
+Uint8 Ascale = AFS_2G;     // AFS_2G, AFS_4G, AFS_8G, AFS_16G
+Uint8 Gscale = GFS_250DPS; // GFS_250DPS, GFS_500DPS, GFS_1000DPS, GFS_2000DPS
 extern float64 gyroBias[3], accelBias[3];
 
 
@@ -58,52 +56,120 @@ void main(void)
         TxMsgBuffer[i] = i;
         RxMsgBuffer[i] = 0;
     }
+    ControlAddr[0]         = WHO_AM_I_MPU9250;
+    Gyro.SlaveAddr         = 0x68;
+    Gyro.NumOfControlBytes = 1;
+    Gyro.NumOfDataBytes    = 1;
+    Gyro.pMsgBuffer        = RxMsgBuffer;
+    Gyro.pControlBuffer    = ControlAddr;
+    Gyro.Timeout           = 100;
+    Status = I2C_MasterRead(&Gyro);
 
-    Gyro.Timeout = 100;
-    Gyro.SlaveAddr = 0x68;
+    for (i = 0; i < Gyro_READ_ATTEMPTS; i++)
+    {
+        // Delay between read attempts during EEPROM write cycle time
+        DELAY_US(1000);
 
-    Status = ReadBytes(MPU9250_ADDRESS, WHO_AM_I_MPU9250, 1, RxMsgBuffer, &Gyro);
+
+        Status = I2C_MasterRead(&Gyro); //ReadBytes(MPU9250_ADDRESS, WHO_AM_I_MPU9250, 1, RxMsgBuffer, &Gyro);
+
+        if(Status == SUCCESS)
+        {
+            break;
+        }
+    }
+
+
+
     //
     // Reset function
     //
     TxMsgBuffer[0] = 0x80;
-    WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    Status = WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+
+    if(Status)
+    {
+        fail();
+    }
+
+    DELAY_US(1000);
     // End of reset function
 
     //
     // Calibrate function
     //
     TxMsgBuffer[0] = 0x80;
-    WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    do{
+    Status = WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
     TxMsgBuffer[0] = 0x01;
-    WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    do{
+    Status = WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
     TxMsgBuffer[0] = 0x00;
-    WriteByte(MPU9250_ADDRESS, PWR_MGMT_2, TxMsgBuffer, &Gyro);
+    do{
+    Status = WriteByte(MPU9250_ADDRESS, PWR_MGMT_2, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
     TxMsgBuffer[0] = 0x00;
-    WriteByte(MPU9250_ADDRESS, INT_ENABLE, TxMsgBuffer, &Gyro);
-    WriteByte(MPU9250_ADDRESS, FIFO_EN, TxMsgBuffer, &Gyro);
-    WriteByte(MPU9250_ADDRESS, INT_ENABLE, TxMsgBuffer, &Gyro);
-    WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
-    WriteByte(MPU9250_ADDRESS, I2C_MST_CTRL, TxMsgBuffer, &Gyro);
-    WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
+    do{
+    Status = WriteByte(MPU9250_ADDRESS, INT_ENABLE, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
+
+    do{
+        Status = WriteByte(MPU9250_ADDRESS, FIFO_EN, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
+
+    do{
+        Status = WriteByte(MPU9250_ADDRESS, INT_ENABLE, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
+    do{
+        Status = WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
+    do{
+        Status = WriteByte(MPU9250_ADDRESS, I2C_MST_CTRL, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
+    do{
+        Status = WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
     TxMsgBuffer[0] = 0x0C;
-    WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
+    do{
+        Status = WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
+
     TxMsgBuffer[0] = 0x01;
-    WriteByte(MPU9250_ADDRESS, CONFIG, TxMsgBuffer, &Gyro);
+    do{
+        Status = WriteByte(MPU9250_ADDRESS, CONFIG, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
+
     TxMsgBuffer[0] = 0x00;
-    WriteByte(MPU9250_ADDRESS, GYRO_CONFIG, TxMsgBuffer, &Gyro);
-    WriteByte(MPU9250_ADDRESS, ACCEL_CONFIG, TxMsgBuffer, &Gyro);
+    do{
+        Status = WriteByte(MPU9250_ADDRESS, GYRO_CONFIG, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
+    do{
+        Status = WriteByte(MPU9250_ADDRESS, ACCEL_CONFIG, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
     Uint16  gyrosensitivity  = 131;
     Uint16  accelsensitivity = 16384;
     TxMsgBuffer[0] = 0x40;
-    WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
+    do{
+        Status = WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
     TxMsgBuffer[0] = 0x78;
-    WriteByte(MPU9250_ADDRESS, FIFO_EN, TxMsgBuffer, &Gyro);
-    DELAY_US(1000);
+    do{
+        Status = WriteByte(MPU9250_ADDRESS, FIFO_EN, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
+    DELAY_US(300);
     TxMsgBuffer[0] = 0x00;
-    WriteByte(MPU9250_ADDRESS, FIFO_EN, TxMsgBuffer, &Gyro);
+    do{
+        Status = WriteByte(MPU9250_ADDRESS, FIFO_EN, TxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
+
+    //while(1){
     RxMsgBuffer[0] = 0x00;
-    ReadBytes(MPU9250_ADDRESS, FIFO_COUNTH, 2, RxMsgBuffer, &Gyro);
+
+    do{
+        Status = ReadBytes(MPU9250_ADDRESS, FIFO_COUNTH, 2, RxMsgBuffer, &Gyro);
+    }while(Status != SUCCESS);
     Uint16 ii, packet_count, fifo_count;
     int32 gyro_bias[3] = {0, 0, 0}, accel_bias[3] = {0, 0, 0};
     Uint8 data[12];
@@ -113,7 +179,9 @@ void main(void)
     for (ii = 0; ii < packet_count; ii++)
     {
         int16 accel_temp[3] = {0, 0, 0}, gyro_temp[3] = {0, 0, 0};
-        ReadBytes(MPU9250_ADDRESS, FIFO_R_W, 12, RxMsgBuffer, &Gyro); // read data for averaging
+        do{
+            Status = ReadBytes(MPU9250_ADDRESS, FIFO_R_W, 12, RxMsgBuffer, &Gyro); // read data for averaging
+        }while(Status != SUCCESS);
         accel_temp[0] = (int16) (((int16)RxMsgBuffer[0] << 8) | RxMsgBuffer[1]  ) ;  // Form signed 16-bit integer for each sample in FIFO
         accel_temp[1] = (int16) (((int16)RxMsgBuffer[2] << 8) | RxMsgBuffer[3]  ) ;
         accel_temp[2] = (int16) (((int16)RxMsgBuffer[4] << 8) | RxMsgBuffer[5]  ) ;
@@ -147,6 +215,7 @@ void main(void)
     gyro_bias[1] = (float64) gyro_bias[1]/(float64) gyrosensitivity;
     gyro_bias[2] = (float64) gyro_bias[2]/(float64) gyrosensitivity;
 
+  //  }
 
 
 
@@ -159,44 +228,44 @@ void main(void)
     // Init Function
     //
     TxMsgBuffer[0] = 0x00;
-    WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    Status = WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
     TxMsgBuffer[0] = 0x81;
-    WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    Status = WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
     TxMsgBuffer[0] = 0x03;
-    WriteByte(MPU9250_ADDRESS, CONFIG, TxMsgBuffer, &Gyro);
+    Status = WriteByte(MPU9250_ADDRESS, CONFIG, TxMsgBuffer, &Gyro);
     TxMsgBuffer[0] = 0x04;
-    WriteByte(MPU9250_ADDRESS, SMPLRT_DIV, TxMsgBuffer, &Gyro);
+    Status = WriteByte(MPU9250_ADDRESS, SMPLRT_DIV, TxMsgBuffer, &Gyro);
     RxMsgBuffer[0] = 0x00;
-    ReadBytes(MPU9250_ADDRESS, GYRO_CONFIG, 1, RxMsgBuffer, &Gyro);
+    Status = ReadBytes(MPU9250_ADDRESS, GYRO_CONFIG, 1, RxMsgBuffer, &Gyro);
     RxMsgBuffer[0] = RxMsgBuffer[0] & ~0x02;
     RxMsgBuffer[0] = RxMsgBuffer[0] & ~0x18;
     RxMsgBuffer[0] = RxMsgBuffer[0] | Gscale << 3;
     TxMsgBuffer[0] = RxMsgBuffer[0];
-    WriteByte(MPU9250_ADDRESS, GYRO_CONFIG, TxMsgBuffer, &Gyro);
+    Status = WriteByte(MPU9250_ADDRESS, GYRO_CONFIG, TxMsgBuffer, &Gyro);
 
-    ReadBytes(MPU9250_ADDRESS, ACCEL_CONFIG, 1, RxMsgBuffer, &Gyro);
+    Status = ReadBytes(MPU9250_ADDRESS, ACCEL_CONFIG, 1, RxMsgBuffer, &Gyro);
     RxMsgBuffer[0] = RxMsgBuffer[0] & ~0x18;
     RxMsgBuffer[0] = RxMsgBuffer[0] | Ascale << 3;
     TxMsgBuffer[0] = RxMsgBuffer[0];
-    WriteByte(MPU9250_ADDRESS, ACCEL_CONFIG, TxMsgBuffer, &Gyro);
+    Status = WriteByte(MPU9250_ADDRESS, ACCEL_CONFIG, TxMsgBuffer, &Gyro);
 
-    ReadBytes(MPU9250_ADDRESS, ACCEL_CONFIG2, 1, RxMsgBuffer, &Gyro);
+    Status = ReadBytes(MPU9250_ADDRESS, ACCEL_CONFIG2, 1, RxMsgBuffer, &Gyro);
     RxMsgBuffer[0] = RxMsgBuffer[0] & ~0x0F;
     RxMsgBuffer[0] = RxMsgBuffer[0] | 0x03;
     TxMsgBuffer[0] = RxMsgBuffer[0];
-    WriteByte(MPU9250_ADDRESS, ACCEL_CONFIG2, TxMsgBuffer, &Gyro);
+    Status = WriteByte(MPU9250_ADDRESS, ACCEL_CONFIG2, TxMsgBuffer, &Gyro);
 
     TxMsgBuffer[0] = 0x22;
-    WriteByte(MPU9250_ADDRESS, INT_PIN_CFG, TxMsgBuffer, &Gyro);
+    Status = WriteByte(MPU9250_ADDRESS, INT_PIN_CFG, TxMsgBuffer, &Gyro);
     TxMsgBuffer[0] = 0x01;
-    WriteByte(MPU9250_ADDRESS, INT_ENABLE, TxMsgBuffer, &Gyro);
+    Status = WriteByte(MPU9250_ADDRESS, INT_ENABLE, TxMsgBuffer, &Gyro);
     DELAY_US(1000);
 
     //
     // End of Init function
     //
 
-    ReadBytes(MPU9250_ADDRESS, WHO_AM_I_MPU9250, 1, RxMsgBuffer, &Gyro);
+    Status = ReadBytes(MPU9250_ADDRESS, WHO_AM_I_MPU9250, 1, RxMsgBuffer, &Gyro);
 
     while(1)
         {
@@ -214,8 +283,8 @@ void   I2CA_Init(void)
     //
 
     I2caRegs.I2CPSC.all = 8;        // Prescaler - need 7-12 Mhz on module clk
-    I2caRegs.I2CCLKL = 10;          // NOTE: must be non zero
-    I2caRegs.I2CCLKH = 5;           // NOTE: must be non zero
+    I2caRegs.I2CCLKL = 8;          // NOTE: must be non zero
+    I2caRegs.I2CCLKH = 7;           // NOTE: must be non zero
     I2caRegs.I2CIER.all = 0x00;     // Disable all interrupts
 
     //
