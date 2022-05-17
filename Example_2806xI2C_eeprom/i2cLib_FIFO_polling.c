@@ -104,7 +104,7 @@ Uint16 I2C_TxSlaveAddress_ControlBytes(struct I2CHandle *I2C_Params)
                 return status;
             }
 
-            DELAY_US(10);
+            DELAY_US(2);
         }
     }
 
@@ -182,7 +182,7 @@ Uint16 I2C_MasterWrite(struct I2CHandle *I2C_Params)
                 return status;
             }
 
-            DELAY_US(10);
+            DELAY_US(2);
         }
 
         count++;
@@ -211,7 +211,7 @@ Uint16 I2C_MasterWrite(struct I2CHandle *I2C_Params)
             return status;
         }
 
-        DELAY_US(10);
+        DELAY_US(2);
     }
 
     // Generate STOP condition
@@ -232,7 +232,7 @@ Uint16 I2C_MasterWrite(struct I2CHandle *I2C_Params)
             return status;
         }
 
-        DELAY_US(10);
+        DELAY_US(2);
     }
 
     return SUCCESS;
@@ -319,7 +319,7 @@ Uint16 I2C_MasterRead(struct I2CHandle *I2C_Params)
                 return status;
             }
 
-            DELAY_US(10);
+            DELAY_US(2);
         }
 
         //
@@ -353,7 +353,7 @@ Uint16 I2C_MasterRead(struct I2CHandle *I2C_Params)
                 return status;
             }
 
-            DELAY_US(10);
+            DELAY_US(2);
         }
 
         //
@@ -385,7 +385,7 @@ Uint16 I2C_MasterRead(struct I2CHandle *I2C_Params)
             return status;
         }
 
-        DELAY_US(10);
+        DELAY_US(2);
     }
 
     return SUCCESS;
