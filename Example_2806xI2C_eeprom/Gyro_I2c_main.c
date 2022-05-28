@@ -19,7 +19,7 @@ void fail(void);
 // Macros
 #define Gyro_READ_ATTEMPTS        10
 #define Gyro_DATA_BYTES           32
-#define wait_0_1                 DELAY_US(100000);
+#define wait(x)                  DELAY_US(100000*x);
 #define wait_0_2                 DELAY_US(200000);
 #define wait_0_04                DELAY_US(40000);
 #define wait_0_015               DELAY_US(15000);
@@ -76,7 +76,7 @@ void main(void)
     //
     TxMsgBuffer[0] = 0x80;
     Status = WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
-    wait_0_1
+    wait(0.1);
     // End of reset function
 
     //
@@ -88,14 +88,14 @@ void main(void)
 
     TxMsgBuffer[0] = 0x80;
     Status = WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
-    wait_0_1
+    wait(0.1);
 
     TxMsgBuffer[0] = 0x01;
     Status = WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
 
     TxMsgBuffer[0] = 0x00;
     Status = WriteByte(MPU9250_ADDRESS, PWR_MGMT_2, TxMsgBuffer, &Gyro);
-    wait_0_2
+    wait(0.2);
 
     TxMsgBuffer[0] = 0x00;
 
@@ -107,7 +107,7 @@ void main(void)
     Status = WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
     TxMsgBuffer[0] = 0x0C;
     Status = WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
-    wait_0_015
+    wait(0.015);
 
 
     TxMsgBuffer[0] = 0x01;
@@ -124,7 +124,7 @@ void main(void)
     Status = WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
     TxMsgBuffer[0] = 0x78;
     Status = WriteByte(MPU9250_ADDRESS, FIFO_EN, TxMsgBuffer, &Gyro);
-    wait_0_04
+    wait(0.04);
 
     TxMsgBuffer[0] = 0x00;
     Status = WriteByte(MPU9250_ADDRESS, FIFO_EN, TxMsgBuffer, &Gyro);
@@ -218,13 +218,13 @@ void main(void)
 
 
     // End of calibrate function
-    wait_0_2
+    wait(0.2);
     //
     // Init Function
     //
     TxMsgBuffer[0] = 0x00;
     Status = WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
-    wait_0_1
+    wait(0.1);
     TxMsgBuffer[0] = 0x81;
     Status = WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
     TxMsgBuffer[0] = 0x03;
@@ -255,7 +255,7 @@ void main(void)
     Status = WriteByte(MPU9250_ADDRESS, INT_PIN_CFG, TxMsgBuffer, &Gyro);
     TxMsgBuffer[0] = 0x01;
     Status = WriteByte(MPU9250_ADDRESS, INT_ENABLE, TxMsgBuffer, &Gyro);
-    wait_0_2
+    wait(0.2);
 
     //
     // End of Init function
@@ -291,14 +291,14 @@ void main(void)
         if( RxMsgBuffer[0] & 0x0001)
           {  // On interrupt, check if data ready interrupt
 
-            ReadBytes(MPU9250_ADDRESS, GYRO_XOUT_H, 1, RxMsgBuffer, &Gyro);  // Read the x/y/z adc values
+            ReadBytes(MPU9250_ADDRESS, GYRO_XOUT_H, 6, RxMsgBuffer, &Gyro);  // Read the x/y/z adc values
             // Now we'll calculate the accleration value into actual g's
             Gyro_raw[0] = (int16)(((int16)RxMsgBuffer[0] << 8) | RxMsgBuffer[1]) ;  // Turn the MSB and LSB into a signed 16-bit value
             Gyro_raw[1] = (int16)(((int16)RxMsgBuffer[2] << 8) | RxMsgBuffer[3]) ;
             Gyro_raw[2] = (int16)(((int16)RxMsgBuffer[4] << 8) | RxMsgBuffer[5]) ;
-            ax = (float64)Gyro_raw[0]*aRes - gyroBias[0];  // get actual g value, this depends on scale being set
-            ay = (float64)Gyro_raw[1]*aRes - gyroBias[1];
-            az = (float64)Gyro_raw[2]*aRes - gyroBias[2];
+            gx = (float64)Gyro_raw[0]*gRes - gyroBias[0];  // get actual g value, this depends on scale being set
+            gy = (float64)Gyro_raw[1]*gRes - gyroBias[1];
+            gz = (float64)Gyro_raw[2]*gRes - gyroBias[2];
           }
 
         }
