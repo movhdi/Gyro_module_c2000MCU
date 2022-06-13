@@ -201,7 +201,6 @@ enum Mscale {
   MFS_16BITS      // 0.15 mG per LSB
 };
 
-
 #define PI              (float64)3.14159265358979323846f
 #define GyroMeasError   (float64)(PI * (60.0f / 180.0f))
 #define beta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasError)
@@ -214,6 +213,7 @@ enum Mscale {
 //===================================================================================================================
 //====== Set of useful function to access acceleratio, gyroscope, and temperature data
 //===================================================================================================================
+
 
 
 
