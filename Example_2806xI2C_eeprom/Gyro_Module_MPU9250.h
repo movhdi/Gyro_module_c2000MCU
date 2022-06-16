@@ -201,11 +201,11 @@ enum Mscale {
   MFS_16BITS      // 0.15 mG per LSB
 };
 
-#define PI              (float64)3.14159265358979323846f
-#define GyroMeasError   (float64)(PI * (60.0f / 180.0f))
-#define beta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasError)
-#define GyroMeasDrift   (float64)(PInn * (1.0f / 180.0f))
-#define zeta            (float64)(sqrt(3.0f / 4.0f) * GyroMeasDrift)
+#define PI              (float32)3.14159265358979323846f
+#define GyroMeasError   (float32)(PI * (60.0f / 180.0f))
+#define beta            (float32)(sqrt(3.0f / 4.0f) * GyroMeasError)
+#define GyroMeasDrift   (float32)(PInn * (1.0f / 180.0f))
+#define zeta            (float32)(sqrt(3.0f / 4.0f) * GyroMeasDrift)
 
 #define Kp 2.0f * 5.0f // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
 #define Ki 0.0f

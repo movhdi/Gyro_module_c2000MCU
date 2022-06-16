@@ -35,13 +35,19 @@ Uint16 ControlBuffer[1];
 Uint16 k=0;
 Uint8 Ascale = AFS_2G;     // AFS_2G, AFS_4G, AFS_8G, AFS_16G
 Uint8 Gscale = GFS_250DPS; // GFS_250DPS, GFS_500DPS, GFS_1000DPS, GFS_2000DPS
-float64 gyroBias[3] = {0, 0, 0}, accelBias[3] = {0, 0, 0};
-float64 aRes, gRes, mRes;      // scale resolutions per LSB for the sensors
-float64 ax, ay, az, gx, gy, gz, mx, my, mz;
+float32 gyroBias[3] = {0, 0, 0}, accelBias[3] = {0, 0, 0};
+float32 aRes, gRes, mRes;      // scale resolutions per LSB for the sensors
+float32 ax, ay, az, gx, gy, gz, mx, my, mz;
 Uint8 Mmode = 0x06;        // Either 8 Hz 0x02) or 100 Hz (0x06) magnetometer data ODR
 Uint8 Mscale = MFS_16BITS; // MFS_14BITS or MFS_16BITS, 14-bit or 16-bit magnetometer resolution
-float64 magCalibration[3] = {0, 0, 0}, magbias[3] = {0, 0, 0}; // Factory mag calibration and mag bias
+float32 magCalibration[3] = {0, 0, 0}, magbias[3] = {0, 0, 0}; // Factory mag calibration and mag bias
 
+
+float32 q[4] = {1.0f, 0.0f, 0.0f, 0.0f};           // vector to hold quaternion
+float32 deltat = 0.0f;
+int32 delt_t = 0; // used to control display output rate
+int32 count = 0;  // used to control display output rate
+float32 pitch, yaw, roll;
 
 void MadgwickQuaternionUpdate(float32 ax, float32 ay, float32 az, float32 gx, float32 gy, float32 gz, float32 mx, float32 my, float32 mz);
 
@@ -173,9 +179,9 @@ void main(void)
     data[5] = (-gyro_bias[2]/4)       & 0xFF;
 
 
-    gyroBias[0] = (float64) gyro_bias[0]/(float64) gyrosensitivity; // construct gyro bias in deg/s for later manual subtraction
-    gyroBias[1] = (float64) gyro_bias[1]/(float64) gyrosensitivity;
-    gyroBias[2] = (float64) gyro_bias[2]/(float64) gyrosensitivity;
+    gyroBias[0] = (float32) gyro_bias[0]/(float32) gyrosensitivity; // construct gyro bias in deg/s for later manual subtraction
+    gyroBias[1] = (float32) gyro_bias[1]/(float32) gyrosensitivity;
+    gyroBias[2] = (float32) gyro_bias[2]/(float32) gyrosensitivity;
 
     int32 accel_bias_reg[3] = {0, 0, 0}; // A place to hold the factory accelerometer trim biases
     RxMsgBuffer[0] = 0x00;
@@ -216,9 +222,9 @@ void main(void)
     data[5] = data[5] | mask_bit[2]; // preserve temperature compensation bit when writing back to accelerometer bias registers
 
     // Output scaled accelerometer biases for manual subtraction in the main program
-    accelBias[0] = (float64)accel_bias[0]/(float64)accelsensitivity;
-    accelBias[1] = (float64)accel_bias[1]/(float64)accelsensitivity;
-    accelBias[2] = (float64)accel_bias[2]/(float64)accelsensitivity;
+    accelBias[0] = (float32)accel_bias[0]/(float32)accelsensitivity;
+    accelBias[1] = (float32)accel_bias[1]/(float32)accelsensitivity;
+    accelBias[2] = (float32)accel_bias[2]/(float32)accelsensitivity;
 
 
     // End of calibrate function
@@ -277,9 +283,9 @@ void main(void)
     WriteByte(AK8963_ADDRESS, AK8963_CNTL, TxMsgBuffer, &Gyro); // Enter Fuse ROM access mode
     wait(0.01);
     ReadBytes(AK8963_ADDRESS, AK8963_ASAX, 3, RxMsgBuffer, &Gyro);// Read the x-, y-, and z-axis calibration values
-    magCalibration[0] =  (float64)(RxMsgBuffer[0] - 128)/256.0f + 1.0f;   // Return x-axis sensitivity adjustment values, etc.
-    magCalibration[1] =  (float64)(RxMsgBuffer[1] - 128)/256.0f + 1.0f;
-    magCalibration[2] =  (float64)(RxMsgBuffer[2] - 128)/256.0f + 1.0f;
+    magCalibration[0] =  (float32)(RxMsgBuffer[0] - 128)/256.0f + 1.0f;   // Return x-axis sensitivity adjustment values, etc.
+    magCalibration[1] =  (float32)(RxMsgBuffer[1] - 128)/256.0f + 1.0f;
+    magCalibration[2] =  (float32)(RxMsgBuffer[2] - 128)/256.0f + 1.0f;
 
     TxMsgBuffer[0] = 0x00;
     WriteByte(AK8963_ADDRESS, AK8963_CNTL, TxMsgBuffer, &Gyro); // Enter Fuse ROM access mode
@@ -368,18 +374,18 @@ void main(void)
             Raw_Data[0] = (int16)(((int16)RxMsgBuffer[0] << 8) | RxMsgBuffer[1]) ;  // Turn the MSB and LSB into a signed 16-bit value
             Raw_Data[1] = (int16)(((int16)RxMsgBuffer[2] << 8) | RxMsgBuffer[3]) ;
             Raw_Data[2] = (int16)(((int16)RxMsgBuffer[4] << 8) | RxMsgBuffer[5]) ;
-            gx = (float64)Raw_Data[0]*gRes - gyroBias[0];  // get actual g value, this depends on scale being set
-            gy = (float64)Raw_Data[1]*gRes - gyroBias[1];
-            gz = (float64)Raw_Data[2]*gRes - gyroBias[2];
+            gx = (float32)Raw_Data[0]*gRes - gyroBias[0];  // get actual g value, this depends on scale being set
+            gy = (float32)Raw_Data[1]*gRes - gyroBias[1];
+            gz = (float32)Raw_Data[2]*gRes - gyroBias[2];
 
             ReadBytes(MPU9250_ADDRESS, ACCEL_XOUT_H, 6, RxMsgBuffer, &Gyro);
             // Now we'll calculate the accleration value into actual g's
             Raw_Data[0] = (int16)(((int16)RxMsgBuffer[0] << 8) | RxMsgBuffer[1]) ;  // Turn the MSB and LSB into a signed 16-bit value
             Raw_Data[1] = (int16)(((int16)RxMsgBuffer[2] << 8) | RxMsgBuffer[3]) ;
             Raw_Data[2] = (int16)(((int16)RxMsgBuffer[4] << 8) | RxMsgBuffer[5]) ;
-            ax = (float64)Raw_Data[0]*aRes - accelBias[0];  // get actual g value, this depends on scale being set
-            ay = (float64)Raw_Data[1]*aRes - accelBias[1];
-            az = (float64)Raw_Data[2]*aRes - accelBias[2];
+            ax = (float32)Raw_Data[0]*aRes - accelBias[0];  // get actual g value, this depends on scale being set
+            ay = (float32)Raw_Data[1]*aRes - accelBias[1];
+            az = (float32)Raw_Data[2]*aRes - accelBias[2];
 
 
             ReadBytes(AK8963_ADDRESS, AK8963_ST1, 1, RxMsgBuffer, &Gyro);
@@ -396,13 +402,22 @@ void main(void)
             }
             // Calculate the magnetometer values in milliGauss
             // Include factory calibration per data sheet and user environmental corrections
-            mx = (float64)Raw_Data[0]*mRes*magCalibration[0] - magbias[0];  // get actual magnetometer value, this depends on scale being set
-            my = (float64)Raw_Data[1]*mRes*magCalibration[1] - magbias[1];
-            mz = (float64)Raw_Data[2]*mRes*magCalibration[2] - magbias[2];
+            mx = (float32)Raw_Data[0]*mRes*magCalibration[0] - magbias[0];  // get actual magnetometer value, this depends on scale being set
+            my = (float32)Raw_Data[1]*mRes*magCalibration[1] - magbias[1];
+            mz = (float32)Raw_Data[2]*mRes*magCalibration[2] - magbias[2];
 
           }
 
-        MadgwickQuaternionUpdate(ax, ay, az, gx, gy, gz, mx, my, mz);
+        MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f,  my,  mx, mz);
+
+
+        yaw   = atan(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);
+        pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
+        roll  = atan(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
+        pitch *= 180.0f / PI;
+        yaw   *= 180.0f / PI;
+        yaw   -= 13.8f; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds on 2014-04-04
+        roll  *= 180.0f / PI;
 
         }
 
@@ -438,14 +453,10 @@ void fail(void)
 
 
 
-float64 q[4] = {1.0f, 0.0f, 0.0f, 0.0f};           // vector to hold quaternion
-float64 deltat = 0.0f;
-int32 delt_t = 0; // used to control display output rate
-int32 count = 0;  // used to control display output rate
 
 
 void MadgwickQuaternionUpdate(float32 ax, float32 ay, float32 az, float32 gx,
-                              float gy, float32 gz, float32 mx, float32 my, float32 mz)
+                              float32 gy, float32 gz, float32 mx, float32 my, float32 mz)
 {
     float32 q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];   // short name local variable for readability
         float32 norm;
@@ -536,7 +547,3 @@ void MadgwickQuaternionUpdate(float32 ax, float32 ay, float32 az, float32 gx,
         q[3] = q4 * norm;
 
 }
-
-
-
-
