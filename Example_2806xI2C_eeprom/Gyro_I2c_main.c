@@ -13,6 +13,7 @@
 
 //funtion prototypes
 void I2CA_Init(void);
+void InitEPwm3Example(void);
 void pass(void);
 void fail(void);
 
@@ -24,9 +25,32 @@ void fail(void);
 #define wait_0_04                DELAY_US(40000);
 #define wait_0_015               DELAY_US(15000);
 
+#define EPWM3_TIMER_TBPRD  2000  // Period register
+#define EPWM3_MAX_CMPA      950
+#define EPWM3_MIN_CMPA       50
+#define EPWM3_MAX_CMPB     1950
+#define EPWM3_MIN_CMPB     1050
+#define EPWM_CMP_UP   1
+#define EPWM_CMP_DOWN 0
+
+
+//typedefs
+
+typedef struct
+{
+    volatile struct EPWM_REGS *EPwmRegHandle;
+    Uint16 EPwm_CMPA_Direction;
+    Uint16 EPwm_CMPB_Direction;
+    Uint16 EPwmTimerIntCount;
+    Uint16 EPwmMaxCMPA;
+    Uint16 EPwmMinCMPA;
+    Uint16 EPwmMaxCMPB;
+    Uint16 EPwmMinCMPB;
+}EPWM_INFO;
 
 // Globals
 struct I2CHandle Gyro;
+EPWM_INFO epwm3_info;
 Uint16 ControlAddr[1];
 Uint16 TxMsgBuffer[MAX_BUFFER_SIZE];
 Uint16 RxMsgBuffer[MAX_BUFFER_SIZE];
@@ -408,6 +432,8 @@ void main(void)
 
           }
 
+        deltat = (Uint32)EPwm3Regs.TBCTR;
+        EPwm3Regs.TBCTR = 0x0000;
         MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f,  my,  mx, mz);
 
 
@@ -451,6 +477,65 @@ void fail(void)
 }
 
 
+void
+InitEPwm3Example(void)
+{
+    //
+    // Setup TBCLK
+    //
+    EPwm3Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP; // Count up
+    EPwm3Regs.TBPRD = 0xFFFF;       // Set timer period
+    EPwm3Regs.TBCTL.bit.PHSEN = TB_DISABLE;    // Disable phase loading
+    EPwm3Regs.TBPHS.half.TBPHS = 0x0000;       // Phase is 0
+    EPwm3Regs.TBCTR = 0x0000;                  // Clear counter
+    EPwm3Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;   // Clock ratio to SYSCLKOUT
+    EPwm3Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+
+    //
+    // Setup shadow register load on ZERO
+    //
+    EPwm3Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
+    EPwm3Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+    EPwm3Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO;
+    EPwm3Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO;
+
+    //
+    // Set Compare values
+    //
+    EPwm3Regs.CMPA.half.CMPA = EPWM3_MIN_CMPA; // Set compare A value
+    EPwm3Regs.CMPB = EPWM3_MAX_CMPB;           // Set Compare B value
+
+    //
+    // Set Actions
+    //
+    EPwm3Regs.AQCTLA.bit.CAU = AQ_SET;    // Set PWM3A on event B, up count
+    EPwm3Regs.AQCTLA.bit.CBU = AQ_CLEAR;  // Clear PWM3A on event B, up count
+
+    EPwm3Regs.AQCTLB.bit.ZRO = AQ_TOGGLE; // Toggle EPWM3B on Zero
+
+    //
+    // Interrupt where we will change the Compare Values
+    //
+    EPwm3Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;     // Select INT on Zero event
+    EPwm3Regs.ETSEL.bit.INTEN = 1;                // Enable INT
+    EPwm3Regs.ETPS.bit.INTPRD = ET_3RD;           // Generate INT on 3rd event
+
+    //
+    // Start by increasing the compare A and decreasing compare B
+    //
+    epwm3_info.EPwm_CMPA_Direction = EPWM_CMP_UP;
+    epwm3_info.EPwm_CMPB_Direction = EPWM_CMP_DOWN;
+
+    //
+    // Start the cout at 0
+    //
+    epwm3_info.EPwmTimerIntCount = 0;
+    epwm3_info.EPwmRegHandle = &EPwm3Regs;
+    epwm3_info.EPwmMaxCMPA = EPWM3_MAX_CMPA;
+    epwm3_info.EPwmMinCMPA = EPWM3_MIN_CMPA;
+    epwm3_info.EPwmMaxCMPB = EPWM3_MAX_CMPB;
+    epwm3_info.EPwmMinCMPB = EPWM3_MIN_CMPB;
+}
 
 
 
