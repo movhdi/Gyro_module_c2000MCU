@@ -72,6 +72,7 @@ float32 deltat = 0.0f;
 int32 delt_t = 0; // used to control display output rate
 int32 count = 0;  // used to control display output rate
 float32 pitch, yaw, roll;
+Uint64 cnt =0;
 
 void MadgwickQuaternionUpdate(float32 ax, float32 ay, float32 az, float32 gx, float32 gy, float32 gz, float32 mx, float32 my, float32 mz);
 
@@ -433,18 +434,22 @@ void main(void)
           }
 
         deltat = (Uint32)EPwm3Regs.TBCTR;
+        deltat = deltat * ((float32)(1.0f/7500000.0f));
         EPwm3Regs.TBCTR = 0x0000;
         MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f,  my,  mx, mz);
-
-
-        yaw   = atan(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);
-        pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
-        roll  = atan(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
-        pitch *= 180.0f / PI;
-        yaw   *= 180.0f / PI;
-        yaw   -= 13.8f; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds on 2014-04-04
-        roll  *= 180.0f / PI;
-
+        //DELAY_US(10);
+        cnt++;
+        if(cnt>5000)
+        {
+            yaw   = atan(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);
+            pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
+            roll  = atan(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
+            pitch *= 180.0f / PI;
+            yaw   *= 180.0f / PI;
+            //yaw   -= 13.8f; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds on 2014-04-04
+            roll  *= 180.0f / PI;
+            cnt = 0;
+        }
         }
 
 }
@@ -489,7 +494,7 @@ InitEPwm3Example(void)
     EPwm3Regs.TBPHS.half.TBPHS = 0x0000;       // Phase is 0
     EPwm3Regs.TBCTR = 0x0000;                  // Clear counter
     EPwm3Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;   // Clock ratio to SYSCLKOUT
-    EPwm3Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+    EPwm3Regs.TBCTL.bit.CLKDIV = 0b110;
 
     //
     // Setup shadow register load on ZERO
