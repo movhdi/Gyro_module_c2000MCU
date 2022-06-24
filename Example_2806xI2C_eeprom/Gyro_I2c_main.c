@@ -11,6 +11,7 @@
 #include "Gyro_module_MPU9250.h"
 #include "i2cLib_FIFO_polling.h"
 
+
 //funtion prototypes
 void I2CA_Init(void);
 void InitEPwm3Example(void);
@@ -86,6 +87,7 @@ void main(void)
     IFR = 0x0000;
     InitPieVectTable();
     I2CA_Init();
+    InitEPwm3Example();
     Uint16 i;
 
 
@@ -313,7 +315,7 @@ void main(void)
     magCalibration[2] =  (float32)(RxMsgBuffer[2] - 128)/256.0f + 1.0f;
 
     TxMsgBuffer[0] = 0x00;
-    WriteByte(AK8963_ADDRESS, AK8963_CNTL, TxMsgBuffer, &Gyro); // Enter Fuse ROM access mode
+    WriteByte(AK8963_ADDRESS, AK8963_CNTL, TxMsgBuffer, &Gyro); // Power down magnetometer
     wait(0.01);
     // Configure the magnetometer for continuous read and highest resolution
     // set Mscale bit 4 to 1 (0) to enable 16 (14) bit resolution in CNTL register,
@@ -423,33 +425,35 @@ void main(void)
                     Raw_Data[0] = (int16)(((int16)RxMsgBuffer[1] << 8) | RxMsgBuffer[0]);  // Turn the MSB and LSB into a signed 16-bit value
                     Raw_Data[1] = (int16)(((int16)RxMsgBuffer[3] << 8) | RxMsgBuffer[2]);  // Data stored as little Endian
                     Raw_Data[2] = (int16)(((int16)RxMsgBuffer[5] << 8) | RxMsgBuffer[4]);
+                    // Calculate the magnetometer values in milliGauss
+                    // Include factory calibration per data sheet and user environmental corrections
+                    mx = (float32)Raw_Data[0]*mRes*magCalibration[0] - magbias[0];  // get actual magnetometer value, this depends on scale being set
+                    my = (float32)Raw_Data[1]*mRes*magCalibration[1] - magbias[1];
+                    mz = (float32)Raw_Data[2]*mRes*magCalibration[2] - magbias[2];
                 }
             }
-            // Calculate the magnetometer values in milliGauss
-            // Include factory calibration per data sheet and user environmental corrections
-            mx = (float32)Raw_Data[0]*mRes*magCalibration[0] - magbias[0];  // get actual magnetometer value, this depends on scale being set
-            my = (float32)Raw_Data[1]*mRes*magCalibration[1] - magbias[1];
-            mz = (float32)Raw_Data[2]*mRes*magCalibration[2] - magbias[2];
+
 
           }
 
-        deltat = (Uint32)EPwm3Regs.TBCTR;
+        deltat = (float32)EPwm3Regs.TBCTR;
         deltat = deltat * ((float32)(1.0f/7500000.0f));
         EPwm3Regs.TBCTR = 0x0000;
         MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f,  my,  mx, mz);
-        //DELAY_US(10);
-        cnt++;
-        if(cnt>5000)
-        {
-            yaw   = atan(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);
-            pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
-            roll  = atan(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
+
+            //var1 = 2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3];
+            //var2 = 2.0f * (q[1] * q[3] - q[0] * q[2]);
+            //var1 = atan((double)var1);
+            //var2 = -asinl(var2);
+            yaw   = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);
+            pitch = -asinl(2.0f * (q[1] * q[3] - q[0] * q[2]));
+            roll  = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
             pitch *= 180.0f / PI;
             yaw   *= 180.0f / PI;
             //yaw   -= 13.8f; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds on 2014-04-04
             roll  *= 180.0f / PI;
             cnt = 0;
-        }
+
         }
 
 }
@@ -579,7 +583,7 @@ void MadgwickQuaternionUpdate(float32 ax, float32 ay, float32 az, float32 gx,
         float32 q4q4 = q4 * q4;
 
         // Normalise accelerometer measurement
-        norm = sqrt(ax * ax + ay * ay + az * az);
+        norm = sqrt(abs(ax * ax) + abs(ay * ay) + abs(az * az));
         if (norm == 0.0f) return; // handle NaN
         norm = 1.0f/norm;
         ax *= norm;
@@ -587,7 +591,7 @@ void MadgwickQuaternionUpdate(float32 ax, float32 ay, float32 az, float32 gx,
         az *= norm;
 
         // Normalise magnetometer measurement
-        norm = sqrt(mx * mx + my * my + mz * mz);
+        norm = sqrt(abs(mx * mx) + abs(my * my) + abs(mz * mz));
         if (norm == 0.0f) return; // handle NaN
         norm = 1.0f/norm;
         mx *= norm;
