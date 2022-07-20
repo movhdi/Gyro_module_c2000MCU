@@ -1,32 +1,34 @@
-//###########################################################################
+//#######################################################################
 //
 // FILE:    Gyro_Module_MPU9250.h
 //
 // TITLE:   Gyroscope and Accelerometer and Magnetometer Code Definitions.
 //
-//###########################################################################
+//#######################################################################
 // $Release Date: 2022 $
 // $Copyright:
 // Copyright (C) 2022 Mohammad Mahdi Movahedi Monfared
 //
-//###########################################################################
+//#######################################################################
 
 
 
 
-#ifndef GYRO_MODULE_MPU9250_H
+#ifndef GYRO_MODULE_MPU9250_H // Include guard
 #define GYRO_MODULE_MPU9250_H
 
-
+// Includes
 #include "F2806x_Cla_typedefs.h"
 #include "i2cLib_FIFO_polling.h"
+#include "DSP28x_Project.h"
+#include <math.h>
 
 
 // See also MPU-9250 Register Map and Descriptions, Revision 4.0, RM-MPU-9250A-00, Rev. 1.4, 9/9/2013 for registers not listed in
 // above document; the MPU9250 and MPU9150 are virtually identical but the latter has a different register map
 //
 //Magnetometer Registers
-#define AK8963_ADDRESS   0x0C<<1
+#define AK8963_ADDRESS   0x0C
 #define AK8963_WHO_AM_I  0x00 // should return 0x48
 #define AK8963_INFO      0x01
 #define AK8963_ST1       0x02  // data ready status bit 0
@@ -171,15 +173,55 @@
 #define ZA_OFFSET_H      0x7D
 #define ZA_OFFSET_L      0x7E
 
+#define PI              (float32)3.14159265358979323846f
+#define GyroMeasError   (float32)((PI) * (60.0f / 180.0f))
+#define GyroMeasDrift   (float32)((PI) * (0.0f / 180.0f))
+#define beta             0.6045998//(float32)(sqrt(3.0f / 4.0f) *(GyroMeasError))
+#define zeta             0.0 //(float32)(sqrt(3.0f / 4.0f) *(GyroMeasDrift))
+#define wait(x)          DELAY_US(100000*x);
+#define Kp 2.0f * 5.0f // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
+#define Ki 0.0f
+
 // The Module's I2C address is 110100X where X is imposed from the system MCU through ADO
 // Seven-bit device address is 110100 for ADO = 0 and 110101 for ADO = 1
-
 #define ADO 0
 #if ADO
 #define MPU9250_ADDRESS 0x69  // Device address when ADO = 1
 #else
 #define MPU9250_ADDRESS 0x68  // Device address when ADO = 0
 #endif
+
+
+
+
+// Globals
+extern struct I2CHandle Gyro;
+
+extern Uint8 Ascale;     // AFS_2G, AFS_4G, AFS_8G, AFS_16G
+extern Uint8 Gscale; // GFS_250DPS, GFS_500DPS, GFS_1000DPS, GFS_2000DPS
+extern Uint8 Mmode;        // Either 8 Hz 0x02) or 100 Hz (0x06) magnetometer data ODR
+extern Uint8 Mscale ; // MFS_14BITS or MFS_16BITS, 14-bit or 16-bit magnetometer resolution
+
+extern int16 temperature;
+
+extern Uint16 Status ;
+extern Uint16 ControlAddr[1];
+extern Uint16 TxMsgBuffer[MAX_BUFFER_SIZE];
+extern Uint16 RxMsgBuffer[MAX_BUFFER_SIZE];
+extern Uint16 ControlBuffer[1];
+extern Uint16 WhoAmI_AK8963;
+
+extern int32 delt_t; // used to control display output rate
+extern int32 count;  // used to control display output rate
+
+extern float32 gyroBias[3], accelBias[3];
+extern float32 aRes, gRes, mRes;      // scale resolutions per LSB for the sensors
+extern float32 ax, ay, az, gx, gy, gz, mx, my, mz;
+extern float32 magCalibration[3], magbias[3]; // Factory mag calibration and mag bias
+extern float32 q[4];// vector to hold quaternion
+extern float32 deltat ;
+extern float32 pitch, yaw, roll,pitch_temp,yaw_temp,roll_temp;
+extern float32 temp;
 
 // Set initial input parameters
 enum Ascale {
@@ -201,18 +243,21 @@ enum Mscale {
   MFS_16BITS      // 0.15 mG per LSB
 };
 
-#define PI              (float32)3.14159265358979323846f
-#define GyroMeasError   (float32)(PI * (60.0f / 180.0f))
-#define beta            (float32)(sqrt(3.0f / 4.0f) * GyroMeasError)
-#define GyroMeasDrift   (float32)(PInn * (1.0f / 180.0f))
-#define zeta            (float32)(sqrt(3.0f / 4.0f) * GyroMeasDrift)
-
-#define Kp 2.0f * 5.0f // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
-#define Ki 0.0f
-
 //===================================================================================================================
-//====== Set of useful function to access acceleratio, gyroscope, and temperature data
+//====== Set of useful function to access acceleration, gyroscope, and temperature data
 //===================================================================================================================
+
+void Reset_MPU9250(void);
+void Init_MPU9250(void);
+void Init_AK8963(void);
+void MPU_9250_Calibrate(void);
+void getAres(void);
+void getGres(void);
+void getMres(void);
+
+void MadgwickQuaternionUpdate(float32 ax, float32 ay, float32 az, float32 gx, float32 gy, float32 gz, float32 mx, float32 my, float32 mz);
+void WriteByte(Uint8 SlaveAddress, Uint16 RegAddress , Uint16 *data, struct I2CHandle *I2C_Params );
+void ReadBytes(Uint8 SlaveAddress, Uint16 RegAddress , Uint8 count,Uint16 *dest, struct I2CHandle *I2C_Params );
 
 
 

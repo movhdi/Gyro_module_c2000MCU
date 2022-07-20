@@ -403,31 +403,7 @@ Uint16 I2C_MasterRead(struct I2CHandle *I2C_Params)
 //      5. Generate STOP condition
 //
 
-Uint16 WriteByte(Uint8 SlaveAddress, Uint16 RegAddress , Uint16 *data, struct I2CHandle *I2C_Params )
-{
-    Uint16 Status;
-    I2C_Params->NumOfControlBytes = 1;
-    I2C_Params->NumOfDataBytes = 1;
-    I2C_Params->SlaveAddr = SlaveAddress;
-    I2C_Params->pMsgBuffer = data;
-    ControlBuffer[0] = RegAddress;
-    I2C_Params->pControlBuffer = ControlBuffer;
-    Status = I2C_MasterWrite(I2C_Params);
-    return Status;
-}
 
-Uint16 ReadBytes(Uint8 SlaveAddress, Uint16 RegAddress , Uint8 count,Uint16 *dest, struct I2CHandle *I2C_Params )
-{
-    Uint16 tatus;
-    I2C_Params->NumOfControlBytes = 1;
-    I2C_Params->NumOfDataBytes = count;
-    I2C_Params->SlaveAddr = SlaveAddress;
-    I2C_Params->pMsgBuffer = dest;
-    ControlBuffer[0] = RegAddress;
-    I2C_Params->pControlBuffer = ControlBuffer; // the address is 8 bits long but the memory is 16bits
-    tatus = I2C_MasterRead(I2C_Params);
-    return tatus;
-}
 
 //
 // checkBusStatus - This function checks the status of the I2C Bus.
