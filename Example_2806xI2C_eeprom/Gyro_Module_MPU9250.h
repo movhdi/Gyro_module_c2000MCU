@@ -173,12 +173,12 @@
 #define ZA_OFFSET_H      0x7D
 #define ZA_OFFSET_L      0x7E
 
-#define PI              (float32)3.14159265358979323846f
+#define PI              (float32)3.141592f
 #define GyroMeasError   (float32)((PI) * (60.0f / 180.0f))
 #define GyroMeasDrift   (float32)((PI) * (0.0f / 180.0f))
 #define beta             0.6045998//(float32)(sqrt(3.0f / 4.0f) *(GyroMeasError))
 #define zeta             0.0 //(float32)(sqrt(3.0f / 4.0f) *(GyroMeasDrift))
-#define wait(x)          DELAY_US(100000*x);
+#define wait(x)          DELAY_US(1000*x)
 #define Kp 2.0f * 5.0f // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
 #define Ki 0.0f
 
@@ -217,7 +217,7 @@ extern int32 count;  // used to control display output rate
 extern float32 gyroBias[3], accelBias[3];
 extern float32 aRes, gRes, mRes;      // scale resolutions per LSB for the sensors
 extern float32 ax, ay, az, gx, gy, gz, mx, my, mz;
-extern float32 magCalibration[3], magbias[3]; // Factory mag calibration and mag bias
+extern float32 magCalibration[3], magbias[3], magScale[3]; // Factory mag calibration and mag bias
 extern float32 q[4];// vector to hold quaternion
 extern float32 deltat ;
 extern float32 pitch, yaw, roll,pitch_temp,yaw_temp,roll_temp;
@@ -250,6 +250,8 @@ enum Mscale {
 void Reset_MPU9250(void);
 void Init_MPU9250(void);
 void Init_AK8963(void);
+void calibrateMag(float32 * dest1, float32 * dest2);
+void readMagData(int16 * destination);
 void MPU_9250_Calibrate(void);
 void getAres(void);
 void getGres(void);

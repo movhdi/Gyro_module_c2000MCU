@@ -35,12 +35,15 @@ void main(void)
 
     Reset_MPU9250();
     Init_MPU9250();
-    wait(2);
+    MPU_9250_Calibrate();
+    wait(1000);
     Init_AK8963();
+    calibrateMag(magbias, magScale);
+    wait(1000);
     getGres();
     getAres();
     getMres();
-
+    wait(3000);
 
     //magbias[0] = +470.;  // User environmental x-axis correction in milliGauss, should be automatically calculated
     //magbias[1] = +120.;  // User environmental x-axis correction in milliGauss
@@ -63,18 +66,18 @@ void main(void)
             Raw_Data[0] = (int16)(((int16)RxMsgBuffer[0] << 8) | RxMsgBuffer[1]) ;  // Turn the MSB and LSB into a signed 16-bit value
             Raw_Data[1] = (int16)(((int16)RxMsgBuffer[2] << 8) | RxMsgBuffer[3]) ;
             Raw_Data[2] = (int16)(((int16)RxMsgBuffer[4] << 8) | RxMsgBuffer[5]) ;
-            gx = (float32)Raw_Data[0]*gRes - gyroBias[0];  // get actual g value, this depends on scale being set
-            gy = (float32)Raw_Data[1]*gRes - gyroBias[1];
-            gz = (float32)Raw_Data[2]*gRes - gyroBias[2];
+            gx = (float32)Raw_Data[0]*gRes ; // - gyroBias[0];  // get actual g value, this depends on scale being set
+            gy = (float32)Raw_Data[1]*gRes ; // - gyroBias[1];
+            gz = (float32)Raw_Data[2]*gRes ; // - gyroBias[2];
 
             ReadBytes(MPU9250_ADDRESS, ACCEL_XOUT_H, 6, RxMsgBuffer, &Gyro);
             // Now we'll calculate the accleration value into actual g's
             Raw_Data[0] = (int16)(((int16)RxMsgBuffer[0] << 8) | RxMsgBuffer[1]) ;  // Turn the MSB and LSB into a signed 16-bit value
             Raw_Data[1] = (int16)(((int16)RxMsgBuffer[2] << 8) | RxMsgBuffer[3]) ;
             Raw_Data[2] = (int16)(((int16)RxMsgBuffer[4] << 8) | RxMsgBuffer[5]) ;
-            ax = (float32)Raw_Data[0]*aRes - accelBias[0];  // get actual g value, this depends on scale being set
-            ay = (float32)Raw_Data[1]*aRes - accelBias[1];
-            az = (float32)Raw_Data[2]*aRes - accelBias[2];
+            ax = (float32)Raw_Data[0]*aRes ; // - accelBias[0];  // get actual g value, this depends on scale being set
+            ay = (float32)Raw_Data[1]*aRes ; // - accelBias[1];
+            az = (float32)Raw_Data[2]*aRes ; // - accelBias[2];
 
 
             ReadBytes(AK8963_ADDRESS, AK8963_ST1, 1, RxMsgBuffer, &Gyro);

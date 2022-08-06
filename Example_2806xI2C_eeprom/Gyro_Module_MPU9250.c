@@ -30,7 +30,7 @@ int32 delt_t = 0; // used to control display output rate
 float32 gyroBias[3] = {0, 0, 0}, accelBias[3] = {0, 0, 0};
 float32 aRes, gRes, mRes;      // scale resolutions per LSB for the sensors
 float32 ax, ay, az, gx, gy, gz, mx, my, mz;
-float32 magCalibration[3] = {0, 0, 0}, magbias[3] = {0, 0, 0}; // Factory mag calibration and mag bias
+float32 magCalibration[3] = {0, 0, 0}, magbias[3] = {0, 0, 0}, magScale[3] = {0,0,0}; // Factory mag calibration and mag bias
 float32 q[4] = {1.0f, 0.0f, 0.0f, 0.0f};           // vector to hold quaternion
 float32 deltat = 0.0f;
 float32 pitch=0, yaw=0, roll=0,pitch_temp=0,yaw_temp=0,roll_temp=0;
@@ -40,23 +40,24 @@ float32 temp = 0;
 void Reset_MPU9250(void){
     TxMsgBuffer[0] = 0x80;
     WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
-    wait(0.1)
+    wait(100);
 }
 
 
 //
-// initAK8963(magCalibration)
+// initAK8963(magCalibration) // double tick
 //
 void Init_AK8963(void)
 {
     // First extract the factory calibration for each magnetometer axis
     TxMsgBuffer[0] = 0x00;
     WriteByte(AK8963_ADDRESS, AK8963_CNTL, TxMsgBuffer, &Gyro);// Power down magnetometer
-    wait(0.01);
+    wait(100);
 
     TxMsgBuffer[0] = 0x0F;
     WriteByte(AK8963_ADDRESS, AK8963_CNTL, TxMsgBuffer, &Gyro); // Enter Fuse ROM access mode
-    wait(0.01);
+    wait(100);
+
     ReadBytes(AK8963_ADDRESS, AK8963_ASAX, 3, RxMsgBuffer, &Gyro);// Read the x-, y-, and z-axis calibration values
     magCalibration[0] =  (float32)(RxMsgBuffer[0] - 128)/256.0f + 1.0f;   // Return x-axis sensitivity adjustment values, etc.
     magCalibration[1] =  (float32)(RxMsgBuffer[1] - 128)/256.0f + 1.0f;
@@ -64,19 +65,19 @@ void Init_AK8963(void)
 
     TxMsgBuffer[0] = 0x00;
     WriteByte(AK8963_ADDRESS, AK8963_CNTL, TxMsgBuffer, &Gyro); // Power down magnetometer
-    wait(0.01);
+    wait(100);
     // Configure the magnetometer for continuous read and highest resolution
     // set Mscale bit 4 to 1 (0) to enable 16 (14) bit resolution in CNTL register,
     // and enable continuous mode data acquisition Mmode (bits [3:0]), 0010 for 8 Hz and 0110 for 100 Hz sample rates
     TxMsgBuffer[0] = Mscale << 4 | Mmode;
     WriteByte(AK8963_ADDRESS, AK8963_CNTL, TxMsgBuffer, &Gyro); // Set magnetometer data resolution and sample ODR
-    wait(0.01);
+    wait(10);
 }
 // End of initAK8963(magCalibration)
 
 
 //
-// Calibrate function
+// Calibrate function // tick tick
 //
 void MPU_9250_Calibrate(void)
 {
@@ -86,26 +87,30 @@ void MPU_9250_Calibrate(void)
 
     TxMsgBuffer[0] = 0x80;
     WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
-    wait(0.1);
+    wait(100);
 
     TxMsgBuffer[0] = 0x01;
     WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
 
     TxMsgBuffer[0] = 0x00;
     WriteByte(MPU9250_ADDRESS, PWR_MGMT_2, TxMsgBuffer, &Gyro);
-    wait(0.2);
+    wait(200);
 
     TxMsgBuffer[0] = 0x00;
-
     WriteByte(MPU9250_ADDRESS, INT_ENABLE, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x00;
     WriteByte(MPU9250_ADDRESS, FIFO_EN, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x00;
     WriteByte(MPU9250_ADDRESS, INT_ENABLE, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x00;
     WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x00;
     WriteByte(MPU9250_ADDRESS, I2C_MST_CTRL, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = 0x00;
     WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
     TxMsgBuffer[0] = 0x0C;
     WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
-    wait(0.015)
+    wait(15);
 
 
     TxMsgBuffer[0] = 0x01;
@@ -115,14 +120,14 @@ void MPU_9250_Calibrate(void)
     WriteByte(MPU9250_ADDRESS, GYRO_CONFIG, TxMsgBuffer, &Gyro);
     WriteByte(MPU9250_ADDRESS, ACCEL_CONFIG, TxMsgBuffer, &Gyro);
 
-    Uint16  gyrosensitivity  = 131;
-    Uint16  accelsensitivity = 16384;
+    Uint16  gyrosensitivity  = 131; // = 131 LSB/degrees/sec
+    Uint16  accelsensitivity = 16384; // = 16384 LSB/g
 
     TxMsgBuffer[0] = 0x40;
     WriteByte(MPU9250_ADDRESS, USER_CTRL, TxMsgBuffer, &Gyro);
     TxMsgBuffer[0] = 0x78;
     WriteByte(MPU9250_ADDRESS, FIFO_EN, TxMsgBuffer, &Gyro);
-    wait(0.04);
+    wait(40);
 
     TxMsgBuffer[0] = 0x00;
     WriteByte(MPU9250_ADDRESS, FIFO_EN, TxMsgBuffer, &Gyro);
@@ -157,8 +162,10 @@ void MPU_9250_Calibrate(void)
     gyro_bias[0]  /= (int32) packet_count;
     gyro_bias[1]  /= (int32) packet_count;
     gyro_bias[2]  /= (int32) packet_count;
-    if(accel_bias[2] > 0L) {accel_bias[2] -= (int32) accelsensitivity;}  // Remove gravity from the z-axis accelerometer bias calculation
-    else {accel_bias[2] += (int32) accelsensitivity;}
+    if(accel_bias[2] > 0L)
+    {accel_bias[2] -= (int32) accelsensitivity;}  // Remove gravity from the z-axis accelerometer bias calculation
+    else
+    {accel_bias[2] += (int32) accelsensitivity;}
     data[0] = (-gyro_bias[0]/4  >> 8) & 0xFF; // Divide by 4 to get 32.9 LSB per deg/s to conform to expected bias input format
     data[1] = (-gyro_bias[0]/4)       & 0xFF; // Biases are additive, so change sign on calculated average gyro biases
     data[2] = (-gyro_bias[1]/4  >> 8) & 0xFF;
@@ -166,6 +173,19 @@ void MPU_9250_Calibrate(void)
     data[4] = (-gyro_bias[2]/4  >> 8) & 0xFF;
     data[5] = (-gyro_bias[2]/4)       & 0xFF;
 
+    //Push gyro biases to hardware registers
+    TxMsgBuffer[0] = data[0];
+    WriteByte(MPU9250_ADDRESS, XG_OFFSET_H, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = data[1];
+    WriteByte(MPU9250_ADDRESS, XG_OFFSET_L, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = data[2];
+    WriteByte(MPU9250_ADDRESS, YG_OFFSET_H, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = data[3];
+    WriteByte(MPU9250_ADDRESS, YG_OFFSET_L, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = data[4];
+    WriteByte(MPU9250_ADDRESS, ZG_OFFSET_H, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = data[5];
+    WriteByte(MPU9250_ADDRESS, ZG_OFFSET_L, TxMsgBuffer, &Gyro);
 
     gyroBias[0] = (float32) gyro_bias[0]/(float32) gyrosensitivity; // construct gyro bias in deg/s for later manual subtraction
     gyroBias[1] = (float32) gyro_bias[1]/(float32) gyrosensitivity;
@@ -175,15 +195,15 @@ void MPU_9250_Calibrate(void)
     RxMsgBuffer[0] = 0x00;
     RxMsgBuffer[1] = 0x00;
     ReadBytes(MPU9250_ADDRESS, XA_OFFSET_H, 2, RxMsgBuffer, &Gyro); // Read factory accelerometer trim values
-    accel_bias_reg[0] = (int16) ((int16)RxMsgBuffer[0] << 8) | RxMsgBuffer[1];
+    accel_bias_reg[0] = (int32) ((int16)RxMsgBuffer[0] << 8) | RxMsgBuffer[1];
 
     ReadBytes(MPU9250_ADDRESS, YA_OFFSET_H, 2, RxMsgBuffer, &Gyro);
-    accel_bias_reg[1] = (int16) ((int16)RxMsgBuffer[0] << 8) | RxMsgBuffer[1];
+    accel_bias_reg[1] = (int32) ((int16)RxMsgBuffer[0] << 8) | RxMsgBuffer[1];
 
     ReadBytes(MPU9250_ADDRESS, ZA_OFFSET_H, 2, RxMsgBuffer, &Gyro);
-    accel_bias_reg[2] = (int16) ((int16)RxMsgBuffer[0] << 8) | RxMsgBuffer[1];
+    accel_bias_reg[2] = (int32) ((int16)RxMsgBuffer[0] << 8) | RxMsgBuffer[1];
 
-    Uint32 mask = 1; // Define mask for temperature compensation bit 0 of lower byte of accelerometer bias registers
+    Uint32 mask = 1uL; // Define mask for temperature compensation bit 0 of lower byte of accelerometer bias registers
     Uint8 mask_bit[3] = {0, 0, 0}; // Define array to hold mask bit for each accelerometer bias axis
 
     for(ii = 0; ii < 3; ii++)
@@ -209,6 +229,21 @@ void MPU_9250_Calibrate(void)
     data[5] = (accel_bias_reg[2])      & 0xFF;
     data[5] = data[5] | mask_bit[2]; // preserve temperature compensation bit when writing back to accelerometer bias registers
 
+    //Push accelerometer biases to hardware registers
+    TxMsgBuffer[0] = data[0];
+    WriteByte(MPU9250_ADDRESS, XA_OFFSET_H, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = data[1];
+    WriteByte(MPU9250_ADDRESS, XA_OFFSET_L, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = data[2];
+    WriteByte(MPU9250_ADDRESS, YA_OFFSET_H, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = data[3];
+    WriteByte(MPU9250_ADDRESS, YA_OFFSET_L, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = data[4];
+    WriteByte(MPU9250_ADDRESS, ZA_OFFSET_H, TxMsgBuffer, &Gyro);
+    TxMsgBuffer[0] = data[5];
+    WriteByte(MPU9250_ADDRESS, ZA_OFFSET_L, TxMsgBuffer, &Gyro);
+
+
     // Output scaled accelerometer biases for manual subtraction in the main program
     accelBias[0] = (float32)accel_bias[0]/(float32)accelsensitivity;
     accelBias[1] = (float32)accel_bias[1]/(float32)accelsensitivity;
@@ -217,47 +252,141 @@ void MPU_9250_Calibrate(void)
 }
 // End of calibrate function
 
+//
+// calibrateMag function
+//
+void calibrateMag(float32 * dest1, float32 * dest2)
+{
+    Uint16 ii = 0, jj = 0, sample_count = 0;
+    int32 mag_bias[3] = {0,0,0}, mag_scale[3] = {0,0,0};
+    int16 mag_max[3] = {-32767,-32767,-32767}, mag_min[3] = {32767,32767,32767},mag_temp[3] = {0,0,0};
+    if(Mmode == 0x02)
+    {
+        sample_count = 128;
+    }
+    if(Mmode == 0x06)
+    {
+        sample_count = 1500;
+    }
 
+    for(ii = 0; ii < sample_count ; ii++)
+    {
+        readMagData(mag_temp);
+        for(jj = 0; jj < 3 ; jj++)
+        {
+            if(mag_temp[jj] > mag_max[jj]) mag_max[jj] = mag_temp[jj];
+            if(mag_temp[jj] < mag_min[jj]) mag_min[jj] = mag_temp[jj];
+        }
+        if(Mmode == 0x02)
+            {
+                wait(135);  // at 8 Hz ODR, new mag data is available every 125 ms
+            }
+        if(Mmode == 0x06)
+            {
+                wait(12);  // at 100 Hz ODR, new mag data is available every 10 ms
+            }
+    }
+
+    // get hard iron correction
+    mag_bias[0]  = (mag_max[0] + mag_min[0])/2;  // get average x mag bias in counts
+    mag_bias[1]  = (mag_max[1] + mag_min[1])/2;  // get average y mag bias in counts
+    mag_bias[2]  = (mag_max[2] + mag_min[2])/2;  // get average z mag bias in counts
+
+    dest1[0] = (float32) mag_bias[0]*mRes*magCalibration[0];  // save mag biases in G for main program
+    dest1[1] = (float32) mag_bias[1]*mRes*magCalibration[1];
+    dest1[2] = (float32) mag_bias[2]*mRes*magCalibration[2];
+
+    // get soft iron correction estimate
+    mag_scale[0]  = (mag_max[0] - mag_min[0])/2;  // get average x axis max chord length in counts
+    mag_scale[1]  = (mag_max[1] - mag_min[1])/2;  // get average y axis max chord length in counts
+    mag_scale[2]  = (mag_max[2] - mag_min[2])/2;  // get average z axis max chord length in counts
+
+    float32 avg_rad = mag_scale[0] + mag_scale[1] + mag_scale[2];
+    avg_rad /= 3.0;
+
+    dest2[0] = avg_rad/((float32)mag_scale[0]);
+    dest2[1] = avg_rad/((float32)mag_scale[1]);
+    dest2[2] = avg_rad/((float32)mag_scale[2]);
+
+}
+
+// end of calibrateMag()
 
 //
-// Init Function
+//  readMagData()
+//
+void readMagData(int16 * destination)
+{
+    ReadBytes(AK8963_ADDRESS, AK8963_ST1, 1, RxMsgBuffer, &Gyro);
+    if( RxMsgBuffer[0] & 0x01)
+    {
+        ReadBytes(AK8963_ADDRESS, AK8963_XOUT_L, 7, RxMsgBuffer, &Gyro);
+        Uint8 c = RxMsgBuffer[6];
+        if(!(c & 0x08))
+        { // Check if magnetic sensor overflow set, if not then report data
+            destination[0] = (int16)(((int16)RxMsgBuffer[1] << 8) | RxMsgBuffer[0]);  // Turn the MSB and LSB into a signed 16-bit value
+            destination[1] = (int16)(((int16)RxMsgBuffer[3] << 8) | RxMsgBuffer[2]);  // Data stored as little Endian
+            destination[2] = (int16)(((int16)RxMsgBuffer[5] << 8) | RxMsgBuffer[4]);
+        }
+    }
+}
+// end of reagMagData
+
+//
+// Init Function  //  double tick
 //
 void Init_MPU9250(void)
 {
     TxMsgBuffer[0] = 0x00;
     WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
-    wait(0.1);
-    TxMsgBuffer[0] = 0x81;
+    wait(100);
+
+    TxMsgBuffer[0] = 0x01;
     WriteByte(MPU9250_ADDRESS, PWR_MGMT_1, TxMsgBuffer, &Gyro);
+    wait(100);
+
     TxMsgBuffer[0] = 0x03;
     WriteByte(MPU9250_ADDRESS, CONFIG, TxMsgBuffer, &Gyro);
+    wait(100);
+
     TxMsgBuffer[0] = 0x04;
     WriteByte(MPU9250_ADDRESS, SMPLRT_DIV, TxMsgBuffer, &Gyro);
+    wait(100);
+
     RxMsgBuffer[0] = 0x00;
     ReadBytes(MPU9250_ADDRESS, GYRO_CONFIG, 1, RxMsgBuffer, &Gyro);
     RxMsgBuffer[0] = RxMsgBuffer[0] & ~0x03;
     RxMsgBuffer[0] = RxMsgBuffer[0] & ~0x18;
     RxMsgBuffer[0] = RxMsgBuffer[0] | Gscale << 3;
+    wait(100);
+
     TxMsgBuffer[0] = RxMsgBuffer[0];
     WriteByte(MPU9250_ADDRESS, GYRO_CONFIG, TxMsgBuffer, &Gyro);
+    wait(100);
 
     ReadBytes(MPU9250_ADDRESS, ACCEL_CONFIG, 1, RxMsgBuffer, &Gyro);
     RxMsgBuffer[0] = RxMsgBuffer[0] & ~0x18;
     RxMsgBuffer[0] = RxMsgBuffer[0] | Ascale << 3;
     TxMsgBuffer[0] = RxMsgBuffer[0];
     WriteByte(MPU9250_ADDRESS, ACCEL_CONFIG, TxMsgBuffer, &Gyro);
+    wait(100);
 
     ReadBytes(MPU9250_ADDRESS, ACCEL_CONFIG2, 1, RxMsgBuffer, &Gyro);
     RxMsgBuffer[0] = RxMsgBuffer[0] & ~0x0F;
     RxMsgBuffer[0] = RxMsgBuffer[0] | 0x03;
     TxMsgBuffer[0] = RxMsgBuffer[0];
     WriteByte(MPU9250_ADDRESS, ACCEL_CONFIG2, TxMsgBuffer, &Gyro);
+    wait(100);
 
     TxMsgBuffer[0] = 0x22;
     WriteByte(MPU9250_ADDRESS, INT_PIN_CFG, TxMsgBuffer, &Gyro);
+
+/*
     TxMsgBuffer[0] = 0x01;
     WriteByte(MPU9250_ADDRESS, INT_ENABLE, TxMsgBuffer, &Gyro);
-    wait(0.2);
+*/
+    wait(1000);
+
 }
 //
 // End of Init function
