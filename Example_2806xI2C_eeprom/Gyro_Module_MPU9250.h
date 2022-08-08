@@ -176,8 +176,8 @@
 #define PI              (float32)3.141592f
 #define GyroMeasError   (float32)((PI) * (60.0f / 180.0f))
 #define GyroMeasDrift   (float32)((PI) * (0.0f / 180.0f))
-#define beta             0.6045998//(float32)(sqrt(3.0f / 4.0f) *(GyroMeasError))
-#define zeta             0.0 //(float32)(sqrt(3.0f / 4.0f) *(GyroMeasDrift))
+#define beta            (float32)0.6045998f//(float32)(sqrt(3.0f / 4.0f) *(GyroMeasError))
+#define zeta            (float32)0.0f //(float32)(sqrt(3.0f / 4.0f) *(GyroMeasDrift))
 #define wait(x)          DELAY_US(1000*x)
 #define Kp 2.0f * 5.0f // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
 #define Ki 0.0f
@@ -203,6 +203,9 @@ extern Uint8 Mmode;        // Either 8 Hz 0x02) or 100 Hz (0x06) magnetometer da
 extern Uint8 Mscale ; // MFS_14BITS or MFS_16BITS, 14-bit or 16-bit magnetometer resolution
 
 extern int16 temperature;
+extern int16 accelCount[3];  // Stores the 16-bit signed accelerometer sensor output
+extern int16 gyroCount[3];   // Stores the 16-bit signed gyro sensor output
+extern int16 magCount[3];    // Stores the 16-bit signed magnetometer sensor output
 
 extern Uint16 Status ;
 extern Uint16 ControlAddr[1];
@@ -220,8 +223,35 @@ extern float32 ax, ay, az, gx, gy, gz, mx, my, mz;
 extern float32 magCalibration[3], magbias[3], magScale[3]; // Factory mag calibration and mag bias
 extern float32 q[4];// vector to hold quaternion
 extern float32 deltat ;
-extern float32 pitch, yaw, roll,pitch_temp,yaw_temp,roll_temp;
+//extern float32 pitch, yaw, roll,pitch_temp,yaw_temp,roll_temp;
 extern float32 temp;
+extern float32 SelfTest[6];
+extern float32 a12, a22, a31, a32, a33;
+
+
+typedef struct
+{
+    float32 AccelX;
+    float32 AccelY;
+    float32 AccelZ;
+
+    float32 GyroX;
+    float32 GyroY;
+    float32 GyroZ;
+
+    float32 MagX;
+    float32 MagY;
+    float32 MagZ;
+
+    float32 pitch;
+    float32 roll;
+    float32 yaw;
+
+    float32 temperature;
+
+} MPU9255_t;
+
+extern MPU9255_t MPU9255;
 
 // Set initial input parameters
 enum Ascale {
@@ -247,12 +277,21 @@ enum Mscale {
 //====== Set of useful function to access acceleration, gyroscope, and temperature data
 //===================================================================================================================
 
+Uint8 MPU_Init(void);
 void Reset_MPU9250(void);
 void Init_MPU9250(void);
-void Init_AK8963(void);
+void Init_AK8963(float32 * destination);
 void calibrateMag(float32 * dest1, float32 * dest2);
 void readMagData(int16 * destination);
-void MPU_9250_Calibrate(void);
+void MPU_9250_Calibrate(float32 * dest1, float32 * dest2);
+void MPU9250SelfTest(float32 * destination);
+
+void readAccelData(int16 *destination);
+void readGyroData(int16 * destination);
+void readMagData(int16 * destination);
+float32 readTempData(void);
+void readAll(MPU9255_t *DataStruct);
+
 void getAres(void);
 void getGres(void);
 void getMres(void);
